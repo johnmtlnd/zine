@@ -27,7 +27,7 @@
 <div class="grain" aria-hidden="true"></div>
 
 <!-- ============ AUTH ============ -->
-<section id="auth" hidden>
+<section id="auth" class="wrap sheet" hidden>
 
   <div class="auth__top">
     <div class="auth__scatter" aria-hidden="true">
@@ -43,17 +43,20 @@
     <h1 class="auth__title" id="auth-name">Off Cuts</h1>
   </div>
 
+  <p class="auth__desc">Musings, scraps, quips, band names and t-shirt ideas. Just for us. &lt;3</p>
+
   <div class="auth__panel">
     <div class="auth__form">
       <label for="auth-email">Email address</label>
-      <input id="auth-email" type="email" inputmode="email"
-             autocomplete="email" placeholder="example@email.com">
-      <button id="auth-send">Send me a magic link</button>
+      <input id="auth-email" class="field" type="email" inputmode="email"
+             autocomplete="email" placeholder="you@example.com">
+      <button id="auth-send" class="commit">Send me a magic link</button>
       <p id="auth-msg" role="status" aria-live="polite"></p>
     </div>
 
     <p class="auth__foot">Just for us</p>
   </div>
+
 
 </section>
 
