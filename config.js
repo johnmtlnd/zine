@@ -11,4 +11,5 @@ export const CONFIG = {
      the notify function — see SETUP.md step 6. Leave as-is to
      ship without push for now; everything else still works. */
   VAPID_PUBLIC_KEY: "BEpoFpIZJ4HQiO37nkJDO0EfcIS9ht3aZnRtGLsFuDH0G4Ju7KeWvOjqUEHryvb16uNrS9t8PVYoUXyBlFRDEB0",
+  VAPID_PUBLIC_KEY: "BExmZV4JsreJ5PKlZplIPMTEcz1NIkLEOV-Z0QLugoMCibRS7eTxBj3q_XJIk7osCUnfw2KzKXrovs6p7UMlWjM"
 };
