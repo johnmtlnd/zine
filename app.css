@@ -1,0 +1,352 @@
+/* ============================================================
+   STRUCTURE — layout and components.
+   You shouldn't need to edit this. Tune theme.css instead.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--body-size);
+  line-height: var(--body-leading);
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: none;
+}
+
+body { min-height: 100dvh; }
+
+/* ---- TEXTURE ------------------------------------------------
+   One overlay for the whole surface. pointer-events:none so it
+   never eats a tap. Fixed so it doesn't scroll with content —
+   the grain belongs to the paper, not the page.
+*/
+.texture {
+  position: fixed; inset: 0; z-index: 9000;
+  pointer-events: none;
+  opacity: var(--halftone);
+  background-image: radial-gradient(var(--ink) 0.5px, transparent 0.6px);
+  background-size: var(--dot-size) var(--dot-size);
+  mix-blend-mode: multiply;
+}
+@media (prefers-color-scheme: dark) { .texture { mix-blend-mode: screen; } }
+
+/* grain layer, separate so its opacity is independent */
+.grain {
+  position: fixed; inset: 0; z-index: 9001; pointer-events: none;
+  opacity: var(--grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+@media (prefers-color-scheme: dark) { .grain { mix-blend-mode: screen; } }
+
+/* ---- SHELL --------------------------------------------------- */
+.wrap {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 0 var(--pad) 8rem;
+}
+
+/* ---- MASTHEAD ------------------------------------------------ */
+.masthead {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: stretch; gap: var(--border);
+  background: var(--paper);
+  border-bottom: calc(var(--border) * 2) solid var(--rule);
+  margin: 0 calc(var(--pad) * -1);
+  padding: 0 var(--pad);
+}
+.masthead__name {
+  flex: 1;
+  display: flex; align-items: center;
+  background: var(--ink); color: var(--paper);
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-track);
+  text-transform: uppercase;
+  font-size: 1.25rem;
+  padding: 10px 12px;
+  margin: 8px 0;
+  cursor: pointer;
+}
+.masthead__btn {
+  appearance: none; border: none; background: none;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-track);
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  padding: 0 10px;
+  cursor: pointer;
+}
+.masthead__btn:active { color: var(--accent); }
+
+/* ---- CAPTURE ------------------------------------------------- */
+.capture {
+  border-bottom: calc(var(--border) * 2) solid var(--rule);
+  margin: 0 calc(var(--pad) * -1);
+  padding: 10px var(--pad);
+}
+.composer {
+  width: 100%;
+  min-height: 2.2rem;
+  resize: none;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1.12rem;
+  line-height: 1.3;
+  padding: 0;
+  outline: none;
+}
+.composer::placeholder { color: var(--ink-faint); }
+
+.capture__row {
+  display: flex; align-items: center; gap: 7px;
+  margin-top: 8px; flex-wrap: wrap;
+}
+
+/* type chips — optional and deferred. Tapping one is a bonus,
+   not a gate. You can always classify later from the feed. */
+.chip {
+  appearance: none; cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-track);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  padding: 5px 9px;
+  border: var(--border) solid var(--ink);
+  background: transparent; color: var(--ink);
+  transition: none;
+}
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.chip--ghost { border-style: dashed; color: var(--ink-soft); }
+
+.spacer { flex: 1 1 auto; }
+
+.iconbtn {
+  appearance: none; cursor: pointer;
+  width: 34px; height: 34px;
+  border: var(--border) solid var(--ink);
+  background: transparent; color: var(--ink);
+  display: grid; place-items: center;
+  padding: 0;
+}
+.iconbtn svg { width: 15px; height: 15px; fill: currentColor; display: block; }
+.iconbtn:active { background: var(--ink); color: var(--paper); }
+.iconbtn--rec[data-recording="true"] {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+
+.commit {
+  appearance: none; cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-track);
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  padding: 10px 16px;
+  border: var(--border) solid var(--ink);
+  background: var(--ink); color: var(--paper);
+}
+.commit:disabled { opacity: 0.3; cursor: default; }
+
+.rectimer {
+  font-family: var(--font-display);
+  letter-spacing: var(--display-track);
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+/* ---- LENS (ALL / BY TYPE) ------------------------------------ */
+.lens {
+  display: flex; gap: 0;
+  margin: 16px 0 4px;
+  border: var(--border) solid var(--ink);
+  width: fit-content;
+}
+.lens button {
+  appearance: none; cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-track);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  padding: 6px 12px;
+  background: transparent; color: var(--ink);
+  border: none;
+  border-right: var(--border) solid var(--ink);
+}
+.lens button:last-child { border-right: none; }
+.lens button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
+/* ---- SECTION RULE -------------------------------------------- */
+.sectionrule {
+  display: flex; align-items: center; gap: 10px;
+  margin: 30px 0 12px;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-track);
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+.sectionrule::after {
+  content: ""; flex: 1; height: calc(var(--border) * 2);
+  background: var(--ink);
+}
+
+/* ---- CARDS --------------------------------------------------- */
+.feed { display: flex; flex-direction: column; gap: var(--gap); margin-top: 12px; }
+
+.card {
+  border: var(--border) solid var(--ink);
+  background: var(--paper);
+  padding: 13px 14px 11px;
+  transform: rotate(var(--card-tilt, 0deg));
+  cursor: pointer;
+}
+.card--pending { border-style: dashed; }
+.card__body {
+  font-size: 1.15rem; line-height: 1.35;
+  margin: 0 0 8px; white-space: pre-wrap; word-break: break-word;
+}
+.card__body:empty { display: none; }
+.card__body--muted { color: var(--ink-soft); font-style: italic; }
+
+.card__meta {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-family: var(--font-display);
+  letter-spacing: var(--display-track);
+  text-transform: uppercase;
+  font-size: 0.66rem;
+  color: var(--ink-soft);
+}
+.card__meta .who { color: var(--ink); }
+.card__meta .type {
+  border: var(--border) solid var(--ink-faint);
+  padding: 2px 6px; color: var(--ink);
+}
+.card__meta .pendingmark { color: var(--accent); }
+
+/* ---- BLOCK WAVEFORM -----------------------------------------
+   A row of solid blocks, not a smooth waveform. A waveform is a
+   data visualisation; this is a printed object.
+*/
+.wave {
+  display: flex; align-items: flex-end; gap: 2px;
+  height: 26px; margin: 4px 0 9px; cursor: pointer;
+}
+.wave i {
+  display: block; width: 3px; background: var(--ink); flex: none;
+}
+.wave[data-playing="true"] i { background: var(--accent); }
+.wave__time {
+  font-family: var(--font-display); letter-spacing: var(--display-track);
+  font-size: 0.66rem; color: var(--ink-soft); margin-left: 8px;
+  align-self: center;
+}
+
+/* ---- PHOTO --------------------------------------------------- */
+.photo {
+  display: block; width: 100%; height: auto;
+  margin: 4px 0 9px;
+  filter: var(--photo-filter);
+  border: var(--border) solid var(--ink);
+}
+
+/* ---- THREAD -------------------------------------------------- */
+.thread { margin: 10px 0 0; border-left: calc(var(--border) * 2) solid var(--ink); padding-left: 11px; }
+.reply { margin: 0 0 8px; font-size: 1rem; }
+.reply__who {
+  font-family: var(--font-display); letter-spacing: var(--display-track);
+  text-transform: uppercase; font-size: 0.64rem; color: var(--ink-soft);
+  margin-right: 6px;
+}
+.replybox {
+  display: flex; gap: 6px; margin-top: 8px;
+}
+.replybox input {
+  flex: 1; border: var(--border) solid var(--ink-faint); background: transparent;
+  color: var(--ink); font-family: var(--font-body); font-size: 0.95rem;
+  padding: 7px 8px; outline: none;
+}
+.replybox input:focus { border-color: var(--ink); }
+
+/* ---- SHUFFLE ------------------------------------------------- */
+.shuffle {
+  position: fixed; inset: 0; z-index: 8000;
+  background: var(--paper);
+  display: grid; grid-template-rows: auto 1fr auto;
+  padding: var(--pad);
+}
+.shuffle[hidden] { display: none; }
+.shuffle__label {
+  font-family: var(--font-display); font-weight: var(--display-weight);
+  letter-spacing: var(--display-track); text-transform: uppercase;
+  font-size: 0.75rem; color: var(--accent);
+}
+.shuffle__body {
+  display: grid; place-items: center; text-align: center;
+  font-size: clamp(1.6rem, 7vw, 2.6rem); line-height: 1.2;
+  padding: 1rem 0; word-break: break-word;
+}
+.shuffle__foot { display: flex; gap: 8px; align-items: center; }
+
+/* ---- ONE YEAR AGO -------------------------------------------- */
+.throwback {
+  border: calc(var(--border) * 2) solid var(--accent);
+  padding: 12px 14px;
+}
+.throwback__label {
+  font-family: var(--font-display); font-weight: var(--display-weight);
+  letter-spacing: var(--display-track); text-transform: uppercase;
+  font-size: 0.68rem; color: var(--accent); margin-bottom: 6px;
+}
+
+/* ---- AUTH / SETTINGS ----------------------------------------- */
+.sheet { padding: 4rem 0 2rem; }
+.sheet h1 {
+  font-family: var(--font-display); font-weight: var(--display-weight);
+  letter-spacing: var(--display-track); text-transform: uppercase;
+  font-size: 2rem; margin: 0 0 4px;
+}
+.sheet p { color: var(--ink-soft); margin: 0 0 22px; }
+.field {
+  width: 100%; border: var(--border) solid var(--ink); background: transparent;
+  color: var(--ink); font-family: var(--font-body); font-size: 1.05rem;
+  padding: 11px 12px; outline: none; margin-bottom: 10px;
+}
+.row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 13px 0;
+  border-bottom: var(--border) solid var(--ink-faint);
+}
+.row__label { font-family: var(--font-display); letter-spacing: var(--display-track); text-transform: uppercase; font-size: 0.78rem; }
+
+.empty {
+  text-align: center; padding: 3.5rem 1rem;
+  color: var(--ink-faint);
+  font-family: var(--font-display); letter-spacing: var(--display-track);
+  text-transform: uppercase; font-size: 0.8rem;
+}
+
+/* ---- OFFLINE BANNER ------------------------------------------ */
+.offline {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+  background: var(--accent); color: #fff;
+  font-family: var(--font-display); letter-spacing: var(--display-track);
+  text-transform: uppercase; font-size: 0.7rem;
+  padding: 7px var(--pad); text-align: center;
+}
+.offline[hidden] { display: none; }
+
+[hidden] { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

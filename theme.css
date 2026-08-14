@@ -1,0 +1,114 @@
+/* ============================================================
+   THEME — the only file you need to touch to change how this looks.
+
+   Everything visual is a variable in here. Structure and layout
+   live in app.css; you shouldn't have to open it. Change a value,
+   commit, done.
+   ============================================================ */
+
+:root {
+
+  /* ---- COLOR -------------------------------------------------
+     Two values and one accent. The discipline of this aesthetic
+     is that the texture does the work, so the palette stays flat.
+     The accent is for exactly one thing at a time — never
+     decorative. If you find yourself using it twice on a screen,
+     one of them is wrong.
+  */
+  --paper:  #F2EFE6;   /* warm off-white. Not gray — gray reads digital. */
+  --ink:    #0B0B0B;   /* not pure black, for the same reason. */
+  --accent: #E8341C;   /* photocopier red. */
+
+  /* Derived. You can leave these alone. */
+  --ink-soft:  color-mix(in srgb, var(--ink) 55%, var(--paper));
+  --ink-faint: color-mix(in srgb, var(--ink) 22%, var(--paper));
+  --rule:      var(--ink);
+
+  /* ---- TYPE --------------------------------------------------
+     Two faces, sharply different jobs. Resist adding a third.
+
+     DISPLAY is a heavy condensed grotesque — app name, type
+     labels, section rules. Set tight and uppercase.
+
+     BODY is a typewriter face and every idea is set in it. This
+     is the most load-bearing choice in the system: typewriter
+     type reads as RECORDED rather than COMPOSED, which is
+     exactly what these are.
+
+     Both stacks below are system fonts, so the app has zero
+     network dependencies and loads instantly offline. If you
+     want something sharper, uncomment the import at the bottom
+     of this file and swap the first name in --font-display.
+  */
+  --font-display: "Arial Narrow", "Haettenschweiler", "Impact",
+                  ui-sans-serif, system-ui, sans-serif;
+  --font-body:    "Courier New", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --display-weight:  700;
+  --display-track:   0.06em;   /* letter-spacing for uppercase display */
+  --body-size:       1.0625rem;
+  --body-leading:    1.5;
+
+  /* ---- TEXTURE -----------------------------------------------
+     Applied once at the root, never per-component.
+     --grain is paper tooth. --halftone is the photocopy dot.
+     Set either to 0 to switch it off entirely.
+  */
+  --grain:    0.10;    /* 0 – 0.30 is the usable range */
+  --halftone: 0.22;    /* 0 – 0.45 */
+  --dot-size: 3px;     /* halftone dot pitch */
+
+  /* ---- CARDS -------------------------------------------------
+     Hard borders. No rounded corners. No shadows, ever.
+     A shadow implies depth and light; a photocopy has neither.
+
+     --tilt is the cut-and-paste feel. Each card's rotation is
+     SEEDED off its id, so it's stable across reloads — the page
+     doesn't reshuffle every time you open it. Random-on-render
+     would be nauseating. Set to 0deg for a straight grid.
+  */
+  --border: 1px;
+  --tilt:   0.9deg;
+  --gap:    14px;
+
+  /* ---- PHOTOS ------------------------------------------------
+     Forced to high contrast and dithered. This single move does
+     more for the aesthetic than everything else combined, and it
+     makes a bad phone snapshot look intentional.
+  */
+  --photo-filter: grayscale(1) contrast(2.4) brightness(1.08);
+
+  /* ---- MOTION ------------------------------------------------
+     Almost none. Things cut rather than fade.
+     A photocopy doesn't ease in.
+  */
+  --dur: 90ms;
+
+  /* ---- LAYOUT ------------------------------------------------ */
+  --measure: 34rem;    /* max content width */
+  --pad:     18px;
+}
+
+/* ---- DARK MODE ------------------------------------------------
+   A genuine inversion — white ink on black paper — rather than
+   the usual chore of desaturating everything. Appropriate here
+   for once: it's the photocopy negative.
+*/
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper:  #0C0C0C;
+    --ink:    #F0EDE4;
+    --accent: #FF4A31;
+    --grain:    0.12;
+    --halftone: 0.16;
+  }
+}
+
+/* ---- OPTIONAL: sharper display face ---------------------------
+   GitHub Pages will serve this fine. It costs one network
+   request and a flash of fallback type on first load, which is
+   why it's off by default.
+
+   @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap');
+   then set:  --font-display: "Archivo Black", "Arial Narrow", sans-serif;
+*/

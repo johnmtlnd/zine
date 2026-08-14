@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F2EFE6">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Archive</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<div class="texture" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ============ AUTH ============ -->
+<section id="auth" class="wrap sheet" hidden>
+  <h1 id="auth-name">Archive</h1>
+  <p>Two people. Enter the email you were let in with.</p>
+  <input class="field" id="auth-email" type="email" inputmode="email"
+         autocomplete="email" placeholder="you@example.com">
+  <button class="commit" id="auth-send">Send the link</button>
+  <p id="auth-msg" style="margin-top:16px"></p>
+</section>
+
+<!-- ============ MAIN ============ -->
+<main id="main" class="wrap" hidden>
+
+  <header class="masthead">
+    <div class="masthead__name" id="masthead-name">Archive</div>
+    <button class="masthead__btn" id="btn-shuffle" title="Shuffle">Shuffle</button>
+    <button class="masthead__btn" id="btn-settings" title="Settings">···</button>
+  </header>
+
+  <!-- Capture is the home screen. Not a feed with an add button. -->
+  <section class="capture">
+    <textarea class="composer" id="composer" rows="1"
+              placeholder="Band name, shirt, whatever&hellip;"
+              autocomplete="off" autocapitalize="sentences"></textarea>
+
+    <div class="capture__row" id="typebar"><!-- type chips injected --></div>
+
+    <div class="capture__row">
+      <button class="iconbtn iconbtn--rec" id="btn-rec" title="Hold to record" aria-label="Hold to record">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/></svg>
+      </button>
+      <button class="iconbtn" id="btn-photo" title="Add a photo" aria-label="Add a photo">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M0 3h4l1-1.5h6L12 3h4v11H0V3Zm8 2.2A3.6 3.6 0 1 0 8 12.4 3.6 3.6 0 0 0 8 5.2Zm0 1.6a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z"/>
+        </svg>
+      </button>
+      <input type="file" id="photo-input" accept="image/*" hidden>
+      <span class="rectimer" id="rectimer"></span>
+      <span class="spacer"></span>
+      <button class="commit" id="btn-commit" disabled>Keep it</button>
+    </div>
+
+    <div class="capture__row" id="attached" hidden></div>
+  </section>
+
+  <div class="lens">
+    <button id="lens-all" aria-pressed="true">All</button>
+    <button id="lens-type" aria-pressed="false">By type</button>
+  </div>
+
+  <div class="feed" id="feed"></div>
+  <div class="empty" id="empty" hidden>Nothing yet. Say something.</div>
+
+</main>
+
+<!-- ============ DETAIL / SHUFFLE ============
+     One component doing two jobs: tapping a card and hitting
+     shuffle both land here. Full bleed, one idea, the thread. -->
+<section class="shuffle" id="detail" hidden>
+  <div class="shuffle__label" id="detail-label"></div>
+  <div class="shuffle__body" id="detail-body"></div>
+  <div class="shuffle__foot">
+    <button class="chip" id="detail-close">Back</button>
+    <button class="chip" id="detail-again" hidden>Again</button>
+    <span class="spacer"></span>
+    <button class="chip chip--ghost" id="detail-delete">Delete</button>
+  </div>
+</section>
+
+<!-- ============ SETTINGS ============ -->
+<section class="shuffle" id="settings" hidden style="grid-template-rows:auto 1fr">
+  <div class="shuffle__label">Settings</div>
+  <div style="overflow:auto">
+    <div class="row">
+      <span class="row__label">Your name</span>
+      <input class="field" id="set-name" style="width:auto;margin:0;max-width:55%">
+    </div>
+    <div class="row">
+      <span class="row__label">Notifications</span>
+      <button class="chip" id="set-push">Turn on</button>
+    </div>
+    <div class="row">
+      <span class="row__label">Add a type</span>
+      <input class="field" id="set-type" placeholder="Tote bag" style="width:auto;margin:0;max-width:55%">
+    </div>
+    <div class="row">
+      <span class="row__label">Sign out</span>
+      <button class="chip" id="set-signout">Sign out</button>
+    </div>
+    <p style="margin-top:24px;color:var(--ink-soft);font-size:.85rem" id="set-status"></p>
+    <button class="chip" id="set-close" style="margin-top:20px">Back</button>
+  </div>
+</section>
+
+<div class="offline" id="offline-banner" hidden>Offline — saved here, will sync</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
