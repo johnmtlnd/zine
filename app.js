@@ -106,7 +106,22 @@ function showAuth() {
       await API.sendMagicLink(email);
       $("auth-msg").textContent = "Check your email. The link brings you back here.";
     } catch (e) {
-      $("auth-msg").textContent = "That didn't work. Is the address on the list?";
+      // Say which thing broke. Supabase's built-in mailer is capped
+      // at 2 messages an hour and only delivers to members of your
+      // Supabase org, so "it didn't work" is usually one of two very
+      // specific things — and they need different fixes.
+      const msg = String(e.message || "").toLowerCase();
+      if (e.status === 429 || msg.includes("rate limit")) {
+        $("auth-msg").textContent =
+          "Supabase's built-in mailer allows 2 emails an hour and that's used up. " +
+          "Wait an hour, or set up custom SMTP (see SETUP step 7b).";
+      } else if (msg.includes("not authorized") || msg.includes("not allowed")) {
+        $("auth-msg").textContent =
+          "Supabase won't email that address. Its built-in mailer only sends to " +
+          "members of your Supabase organisation — custom SMTP fixes it for good.";
+      } else {
+        $("auth-msg").textContent = `Couldn't send it — ${e.message}`;
+      }
       $("auth-send").disabled = false;
     }
   };
@@ -141,9 +156,15 @@ async function refreshFromServer() {
     const rows = await api.entries();
     S.entries = rows;
     await cache.replace(rows);
+    denied = false;
+    paintBanner();
     render();
   } catch (e) {
-    // offline or expired — the cache is still good
+    // 401/403 means auth worked but row-level security said no —
+    // almost always the email isn't in allowed_emails. That's a
+    // permanent condition, so surface it. Anything else is just
+    // a flaky network and the cache still stands.
+    if (e.status === 401 || e.status === 403) { denied = true; paintBanner(); }
   }
 }
 
@@ -206,9 +227,9 @@ function wire() {
   });
   $("set-push").onclick = enablePush;
 
-  window.addEventListener("online", () => { showOffline(false); syncQueue(); refreshFromServer(); });
-  window.addEventListener("offline", () => showOffline(true));
-  showOffline(!navigator.onLine);
+  window.addEventListener("online", () => { showOffline(); syncQueue(); refreshFromServer(); });
+  window.addEventListener("offline", () => showOffline());
+  showOffline();
 
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) { syncQueue(); refreshFromServer(); }
@@ -218,7 +239,25 @@ function wire() {
 }
 
 const status = (t) => { $("set-status").textContent = t; };
-const showOffline = (b) => { $("offline-banner").hidden = !b; };
+
+/* One banner, two jobs. Being offline is expected and temporary;
+   being rejected by the database is a misconfiguration that will
+   never fix itself, so it has to say so rather than showing an
+   empty feed and letting you guess. */
+let denied = false;
+function paintBanner() {
+  const b = $("offline-banner");
+  if (!navigator.onLine) {
+    b.textContent = "Offline — saved here, will sync";
+    b.hidden = false;
+  } else if (denied) {
+    b.textContent = "Signed in, but the database is refusing you — check allowed_emails";
+    b.hidden = false;
+  } else {
+    b.hidden = true;
+  }
+}
+const showOffline = () => paintBanner();
 
 function updateCommit() {
   const has = $("composer").value.trim() || S.draft.audio || S.draft.photo;

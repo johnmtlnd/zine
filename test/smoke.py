@@ -108,7 +108,13 @@ async def main():
         check("throwback shown (1yr ago today)", await pg.locator(".throwback").count() == 1)
         check("transcript fallback italic", await pg.locator(".card__body--muted").count() >= 1)
         check("waveform for audio entry", await pg.locator(".wave").count() == 1)
-        check("masthead name from config", (await pg.inner_text("#masthead-name")).strip().lower() == "offcuts")
+        # Compare against the config value, not a literal — the name is
+        # John's to change and a hardcoded string here just breaks later.
+        cfgname = await pg.evaluate("import('./config.js').then(m => m.CONFIG.NAME)")
+        rendered = (await pg.inner_text("#masthead-name")).strip()
+        norm = lambda x: "".join(x.lower().split())
+        check("masthead name from config", norm(rendered) == norm(cfgname),
+              f"rendered {rendered!r} vs config {cfgname!r}")
         await pg.screenshot(path="/tmp/feed.png", full_page=False)
 
         # tilt is seeded => stable across reloads

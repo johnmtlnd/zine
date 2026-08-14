@@ -9,11 +9,14 @@
    browsers will happily serve the old one forever.
    ============================================================ */
 
-const SHELL_V = "shell-v3";
+const SHELL_V = "shell-v6";
 const SHELL = [
   "./",
   "./index.html",
   "./app.css",
+  "./auth.css",
+  "./fonts/PPNikkeiMaru-Heavy.woff",
+  "./fonts/PPNikkeiMaru-Regular.woff",
   "./theme-glass.css",
   "./theme-zine.css",
   "./app.js",

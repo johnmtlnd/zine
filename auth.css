@@ -1,0 +1,275 @@
+/* ============================================================
+   THE FRONT DOOR
+   Self-contained — every rule is scoped under #auth, so nothing
+   here leaks into the app itself.
+
+   Tune the variables at the top; the rest follows from them.
+   ============================================================ */
+
+@font-face {
+  font-family: "Nikkei Maru";
+  src: url("fonts/PPNikkeiMaru-Regular.woff") format("woff");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Nikkei Maru";
+  src: url("fonts/PPNikkeiMaru-Heavy.woff") format("woff");
+  font-weight: 900; font-style: normal; font-display: swap;
+}
+
+#auth {
+  /* ---- palette ---- */
+  --cream: #F7E7D7;
+  --red:   #FB0D00;
+  --black: #1A1A18;
+
+  /* ---- the torn edge ----
+     Depth of the teeth. The COUNT is set per breakpoint by the
+     clip-path on .auth__panel, so they get chunkier as the screen
+     narrows instead of turning into a fine sawblade. */
+  --tooth-h: 3.2vw;
+
+  /* ---- how far the title tucks under the red ----
+     A fraction of the title's own size. Higher = more buried. */
+  --bleed: 0.29em;
+
+  /* ---- type ---- */
+  --track-wide: 0.21em;   /* the spec'd 21% */
+  --label:      clamp(0.72rem, 1.12vw, 1.3rem);
+
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; flex-direction: column;
+  overflow-y: auto; overscroll-behavior: contain;
+  background: var(--cream);
+  font-family: "Nikkei Maru", var(--font-body);
+  color: var(--black);
+}
+#auth[hidden] { display: none !important; }
+
+/* ============ TOP: cream ============ */
+.auth__top {
+  position: relative;
+  flex: 0 0 auto;
+  /* No horizontal padding — it would cap how wide the title can
+     run, and running edge to edge is the whole gesture. The
+     scatter and the kicker carry their own inset instead.
+     Vertical rhythm keys off viewport HEIGHT: a 1440x900 laptop is
+     wide and short, and sizing this off vw overflows it. */
+  padding: clamp(1.1rem, 3.5vh, 3.2rem) 0 0;
+}
+
+/* ---- the scattered words ----
+   Absolutely placed inside a flexible box so they drift with the
+   viewport instead of reflowing into a tidy row, which would kill
+   the effect entirely. */
+.auth__scatter {
+  position: relative;
+  padding-inline: clamp(1rem, 2.4vw, 3rem);
+  height: clamp(5rem, 15vh, 13rem);
+  font-weight: 900;
+  font-size: var(--label);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+}
+.auth__scatter span {
+  position: absolute;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+.auth__scatter span:nth-child(1) { left:  6%; top:  6%; }
+.auth__scatter span:nth-child(2) { left: 43%; top: 32%; }
+.auth__scatter span:nth-child(3) { left: 73%; top: 17%; }
+.auth__scatter span:nth-child(4) { left: 26%; top: 92%; }
+.auth__scatter span:nth-child(5) { left: 71%; top: 91%; }
+.auth__scatter span:nth-child(6) { left: 88%; top: 74%; }
+
+.auth__welcome {
+  padding-inline: clamp(1rem, 2.4vw, 3rem);
+  margin: clamp(0.4rem, 2vh, 1.75rem) 0 0;
+  text-align: center;
+  font-weight: 400;
+  font-size: clamp(0.85rem, 1.5vw, 1.75rem);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+}
+
+/* ---- the title ----
+   Sized in vw so it always spans the measure. The negative bottom
+   margin is what lets the red ride up and bury its feet. */
+.auth__title {
+  margin: clamp(0.1rem, 0.6vw, 0.6rem) 0 calc(var(--bleed) * -1);
+  text-align: center;
+  font-weight: 900;
+  font-size: 17.4vw;
+  line-height: 0.78;
+  letter-spacing: -0.005em;
+  /* Heavy closes the word space almost entirely at display size.
+     Open it back up or "OFF CUTS" reads as one word. */
+  word-spacing: 0.13em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ============ BOTTOM: red ============ */
+.auth__panel {
+  position: relative;
+  z-index: 2;                    /* rides over the title */
+  flex: 1 0 auto;
+  background: var(--red);
+  color: #fff;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  /* top padding clears the teeth, bottom clears the pinned footer */
+  padding: calc(var(--tooth-h) + clamp(2rem, 8vh, 5.5rem))
+           clamp(1.35rem, 4vw, 3rem)
+           clamp(4rem, 9vh, 6.5rem);
+
+  /* The torn edge — a clip-path on the panel itself.
+
+     Not a mask over a coloured block: masking leaves the top row
+     of red partially transparent, which renders as a hairline
+     across the full width. A clip has no fill to bleed.
+
+     And not cream carved over the top either — because the PANEL
+     is what's clipped, the red sits above the title, so the
+     letters stay visible inside the notches instead of being
+     painted over. That's the whole effect. */
+  clip-path: polygon(0.0000% var(--tooth-h), 3.5714% 0px, 7.1429% var(--tooth-h), 10.7143% 0px, 14.2857% var(--tooth-h), 17.8571% 0px, 21.4286% var(--tooth-h), 25.0000% 0px, 28.5714% var(--tooth-h), 32.1429% 0px, 35.7143% var(--tooth-h), 39.2857% 0px, 42.8571% var(--tooth-h), 46.4286% 0px, 50.0000% var(--tooth-h), 53.5714% 0px, 57.1429% var(--tooth-h), 60.7143% 0px, 64.2857% var(--tooth-h), 67.8571% 0px, 71.4286% var(--tooth-h), 75.0000% 0px, 78.5714% var(--tooth-h), 82.1429% 0px, 85.7143% var(--tooth-h), 89.2857% 0px, 92.8571% var(--tooth-h), 96.4286% 0px, 100.0000% var(--tooth-h), 100% 100%, 0% 100%);
+}
+
+/* ---- the form ---- */
+.auth__form {
+  width: min(30rem, 100%);
+  display: flex; flex-direction: column;
+  align-items: stretch;
+}
+.auth__form label {
+  font-weight: 900;
+  font-size: var(--label);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+  margin-bottom: 0.75em;
+}
+
+#auth-email {
+  width: 100%;
+  border: 2px solid transparent;
+  border-radius: 0.7rem;
+  background: #fff;
+  color: var(--black);
+  font-family: inherit;
+  font-weight: 400;
+  font-size: clamp(1rem, 1.35vw, 1.4rem);
+  padding: 0.95em 1.05em;
+  outline: none;
+  transition: border-color 140ms ease;
+}
+#auth-email::placeholder { color: #9A9A96; }
+#auth-email:focus-visible { border-color: var(--black); }
+
+#auth-send {
+  align-self: center;
+  margin-top: clamp(1.5rem, 3.2vw, 2.75rem);
+  cursor: pointer;
+  border: none;
+  border-radius: 0.8rem;
+  background: var(--black);
+  color: #fff;
+  font-family: inherit;
+  /* Regular, not Heavy. Heavy's 'c' has so little aperture that
+     "magic" reads as "magio" at button size. */
+  font-weight: 400;
+  font-size: clamp(1rem, 1.45vw, 1.5rem);
+  letter-spacing: 0.005em;
+  padding: 0.8em 1.55em;
+  transition: transform 140ms ease, opacity 140ms ease;
+}
+#auth-send:hover:not(:disabled) { transform: translateY(-1px); }
+#auth-send:active:not(:disabled) { transform: translateY(1px); }
+#auth-send:disabled { opacity: 0.55; cursor: default; }
+
+#auth-msg {
+  margin: 1.25em 0 0;
+  text-align: center;
+  font-size: clamp(0.85rem, 1.05vw, 1.05rem);
+  line-height: 1.45;
+  min-height: 1.4em;      /* reserve the space so nothing jumps */
+  color: #fff;
+}
+
+.auth__foot {
+  /* Anchored to the bottom of the panel. Left in flow it lands
+     wherever the gap puts it, which on a tall phone is the middle
+     of a red void. */
+  position: absolute;
+  left: 0; right: 0;
+  bottom: clamp(1.25rem, 3vw, 3rem);
+  text-align: center;
+  margin: 0;
+  font-weight: 400;
+  font-size: var(--label);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+  color: #fff;
+}
+
+/* ============ RESPONSIVE ============
+   Holds down to about 360px. Fewer, chunkier teeth as it narrows —
+   keeping the count fixed would turn them into a fine sawblade. */
+
+@media (max-width: 1100px) {
+  #auth { --tooth-h: 4.2vw; }
+  .auth__panel { clip-path: polygon(0.0000% var(--tooth-h), 5.0000% 0px, 10.0000% var(--tooth-h), 15.0000% 0px, 20.0000% var(--tooth-h), 25.0000% 0px, 30.0000% var(--tooth-h), 35.0000% 0px, 40.0000% var(--tooth-h), 45.0000% 0px, 50.0000% var(--tooth-h), 55.0000% 0px, 60.0000% var(--tooth-h), 65.0000% 0px, 70.0000% var(--tooth-h), 75.0000% 0px, 80.0000% var(--tooth-h), 85.0000% 0px, 90.0000% var(--tooth-h), 95.0000% 0px, 100.0000% var(--tooth-h), 100% 100%, 0% 100%); }
+  .auth__title { font-size: 17.8vw; }
+}
+
+@media (max-width: 720px) {
+  #auth {
+    --tooth-h: 6vw;
+    --bleed: 0.26em;
+    --track-wide: 0.16em;
+  }
+  .auth__panel { clip-path: polygon(0.0000% var(--tooth-h), 7.1429% 0px, 14.2857% var(--tooth-h), 21.4286% 0px, 28.5714% var(--tooth-h), 35.7143% 0px, 42.8571% var(--tooth-h), 50.0000% 0px, 57.1429% var(--tooth-h), 64.2857% 0px, 71.4286% var(--tooth-h), 78.5714% 0px, 85.7143% var(--tooth-h), 92.8571% 0px, 100.0000% var(--tooth-h), 100% 100%, 0% 100%); }
+  /* Two of the six would overlap at this width. Losing them beats
+     letting them collide. */
+  .auth__scatter span:nth-child(3),
+  .auth__scatter span:nth-child(5) { display: none; }
+  .auth__scatter span:nth-child(1) { left: 22%; top:  8%; }
+  .auth__scatter span:nth-child(2) { left: 72%; top: 30%; }
+  .auth__scatter span:nth-child(4) { left: 30%; top: 62%; }
+  .auth__scatter span:nth-child(6) { left: 76%; top: 78%; }
+  .auth__scatter { height: 9rem; }
+  .auth__title { font-size: 18.4vw; }
+  /* Centred in a tall panel the form strands itself low with a big
+     empty field above it. Sit it near the top instead. */
+  .auth__panel {
+    justify-content: flex-start;
+    padding-top: calc(var(--tooth-h) + clamp(1.5rem, 8vw, 4rem));
+  }
+}
+
+@media (max-width: 420px) {
+  #auth { --tooth-h: 7.5vw; }
+  .auth__panel { clip-path: polygon(0.0000% var(--tooth-h), 10.0000% 0px, 20.0000% var(--tooth-h), 30.0000% 0px, 40.0000% var(--tooth-h), 50.0000% 0px, 60.0000% var(--tooth-h), 70.0000% 0px, 80.0000% var(--tooth-h), 90.0000% 0px, 100.0000% var(--tooth-h), 100% 100%, 0% 100%); }
+  .auth__title { font-size: 18.6vw; }
+}
+
+/* Short landscape windows: everything competes for height, and the
+   pinned footer ends up under the fold. */
+@media (max-height: 620px) and (orientation: landscape) {
+  #auth { --tooth-h: 2.2vw; }
+  .auth__scatter { height: 4rem; }
+  .auth__welcome { font-size: 0.8rem; }
+  .auth__title { font-size: 13vw; }
+  .auth__panel {
+    justify-content: flex-start;
+    padding-top: calc(var(--tooth-h) + 1.5rem);
+    padding-bottom: 1.5rem;
+  }
+  #auth-send { margin-top: 1.25rem; }
+  .auth__foot { position: static; margin-top: 1.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #auth * { transition: none !important; }
+}

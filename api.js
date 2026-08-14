@@ -97,7 +97,15 @@ export async function sendMagicLink(email) {
     headers: { apikey: KEY, "Content-Type": "application/json" },
     body: JSON.stringify({ email, create_user: true }),
   });
-  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).msg || "Could not send the link");
+  if (!r.ok) {
+    // Keep what Supabase actually said. Collapsing every failure
+    // into one guess is how you end up debugging the wrong thing.
+    const d = await r.json().catch(() => ({}));
+    const err = new Error(d.msg || d.message || d.error_description || "Could not send the link");
+    err.status = r.status;
+    err.code = d.error_code || d.error || "";
+    throw err;
+  }
   return true;
 }
 

@@ -14,6 +14,7 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="stylesheet" href="theme-glass.css">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="auth.css">
 </head>
 <!-- Structural variants. Try combinations in playground.html,
      then paste what you land on here.
@@ -26,13 +27,34 @@
 <div class="grain" aria-hidden="true"></div>
 
 <!-- ============ AUTH ============ -->
-<section id="auth" class="wrap sheet" hidden>
-  <h1 id="auth-name">Archive</h1>
-  <p>Two people. Enter the email you were let in with.</p>
-  <input class="field" id="auth-email" type="email" inputmode="email"
-         autocomplete="email" placeholder="you@example.com">
-  <button class="commit" id="auth-send">Send the link</button>
-  <p id="auth-msg" style="margin-top:16px"></p>
+<section id="auth" hidden>
+
+  <div class="auth__top">
+    <div class="auth__scatter" aria-hidden="true">
+      <span>Missives</span>
+      <span>Scraps</span>
+      <span>T-shirts</span>
+      <span>Band names</span>
+      <span>Quips</span>
+      <span>Ideas</span>
+    </div>
+    <p class="auth__welcome">Welcome to</p>
+    <!-- app.js writes CONFIG.NAME in here -->
+    <h1 class="auth__title" id="auth-name">Off Cuts</h1>
+  </div>
+
+  <div class="auth__panel">
+    <div class="auth__form">
+      <label for="auth-email">Email address</label>
+      <input id="auth-email" type="email" inputmode="email"
+             autocomplete="email" placeholder="example@email.com">
+      <button id="auth-send">Send me a magic link</button>
+      <p id="auth-msg" role="status" aria-live="polite"></p>
+    </div>
+
+    <p class="auth__foot">Just for us</p>
+  </div>
+
 </section>
 
 <!-- ============ MAIN ============ -->

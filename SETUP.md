@@ -129,6 +129,45 @@ a miserable half hour of your life.
 
 ---
 
+## 7b · Custom SMTP — not optional, despite how it sounds
+
+**Read this before you test sign-in.** Supabase's built-in mailer has two
+limits that together make a two-person app impossible:
+
+- **2 emails per hour**, across signup and sign-in combined. Two people
+  testing will burn that in about ninety seconds.
+- **It only delivers to members of your Supabase organisation.** This is
+  the one that actually stops you. Biz isn't a member of your Supabase org,
+  so she will *never* receive a magic link on the default mailer. Not
+  slowly — never.
+
+You can't get around this by waiting. It needs a real email provider.
+
+1. Sign up at [resend.com](https://resend.com) — the free tier is 3,000
+   emails a month, which is roughly 2,999 more than you two need.
+2. Add and verify `offcuts.info` as a sending domain. Resend gives you
+   two or three DNS records to add at your registrar, same place you put
+   the A records.
+3. Create an API key.
+4. Supabase → **Authentication** → **Emails** → **SMTP Settings** →
+   enable custom SMTP:
+   - Host: `smtp.resend.com`
+   - Port: `465`
+   - Username: `resend`
+   - Password: your Resend API key
+   - Sender email: something at your domain, e.g. `hello@offcuts.info`
+5. Same page, **Rate Limits** — raise emails per hour from 2 to something
+   sane like 30.
+
+If you'd rather not set up a mail provider at all, the alternative is to
+drop magic links and use email plus password, with email confirmation
+turned off in **Authentication → Providers → Email**. For two people who
+already trust each other, that's a defensible trade and it removes the
+email dependency completely. It's a small change to `api.js` — ask and
+I'll make it.
+
+---
+
 ## 8 · Switch the website on
 
 In GitHub: your repo → **Settings** → **Pages**.
