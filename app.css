@@ -1,146 +1,178 @@
 /* ============================================================
-   STRUCTURE — layout and components.
-   You shouldn't need to edit this. Tune theme.css instead.
+   COMPONENTS — aesthetic-neutral.
+
+   Every visual decision comes from a token. Spacing comes from
+   --space-1..7, type from --text-xs..2xl. There are no
+   hand-picked pixel values in here, which is the difference
+   between a system and a pile of nudges.
+
+   Structural variants live at the bottom and are switched with
+   attributes on <body>:
+
+     <body data-cards="raised" data-meta="full" data-capture="card">
+
+   Open playground.html to try combinations live.
    ============================================================ */
 
 *, *::before, *::after { box-sizing: border-box; }
 
 html, body {
   margin: 0; padding: 0;
-  background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
   font-size: var(--body-size);
   line-height: var(--body-leading);
   -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
 }
 
-body { min-height: 100dvh; }
+/* The backdrop. Two wide soft blooms over a flat base — what
+   every blurred surface in the app is refracting. */
+body {
+  min-height: 100dvh;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(70ch 70ch at 12% -8%,  var(--field-1), transparent 70%),
+    radial-gradient(60ch 60ch at 92% 108%, var(--field-2), transparent 70%);
+  background-attachment: fixed;
+}
 
-/* ---- TEXTURE ------------------------------------------------
-   One overlay for the whole surface. pointer-events:none so it
-   never eats a tap. Fixed so it doesn't scroll with content —
-   the grain belongs to the paper, not the page.
-*/
+/* ---- TEXTURE (zine only — both are 0 under glass) ----------- */
 .texture {
-  position: fixed; inset: 0; z-index: 9000;
-  pointer-events: none;
+  position: fixed; inset: 0; z-index: 900; pointer-events: none;
   opacity: var(--halftone);
   background-image: radial-gradient(var(--ink) 0.5px, transparent 0.6px);
   background-size: var(--dot-size) var(--dot-size);
   mix-blend-mode: multiply;
 }
-@media (prefers-color-scheme: dark) { .texture { mix-blend-mode: screen; } }
-
-/* grain layer, separate so its opacity is independent */
 .grain {
-  position: fixed; inset: 0; z-index: 9001; pointer-events: none;
+  position: fixed; inset: 0; z-index: 901; pointer-events: none;
   opacity: var(--grain);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
   mix-blend-mode: multiply;
 }
-@media (prefers-color-scheme: dark) { .grain { mix-blend-mode: screen; } }
+@media (prefers-color-scheme: dark) { .texture, .grain { mix-blend-mode: screen; } }
 
 /* ---- SHELL --------------------------------------------------- */
 .wrap {
   max-width: var(--measure);
   margin: 0 auto;
-  padding: 0 var(--pad) 8rem;
+  padding: 0 var(--pad) var(--space-7);
 }
 
 /* ---- MASTHEAD ------------------------------------------------ */
 .masthead {
   position: sticky; top: 0; z-index: 50;
-  display: flex; align-items: stretch; gap: var(--border);
-  background: var(--paper);
-  border-bottom: calc(var(--border) * 2) solid var(--rule);
+  display: flex; align-items: center; gap: var(--space-1);
   margin: 0 calc(var(--pad) * -1);
-  padding: 0 var(--pad);
+  padding: var(--space-3) var(--pad);
+  background: var(--surface-strong);
+  backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  border-bottom: var(--rule-weight) solid var(--hairline-strong);
+  box-shadow: var(--specular);
 }
 .masthead__name {
   flex: 1;
   display: flex; align-items: center;
-  background: var(--ink); color: var(--paper);
+  background: var(--masthead-fill);
+  color: var(--masthead-ink);
   font-family: var(--font-display);
   font-weight: var(--display-weight);
   letter-spacing: var(--display-track);
-  text-transform: uppercase;
-  font-size: 1.25rem;
-  padding: 10px 12px;
-  margin: 8px 0;
+  text-transform: var(--display-transform);
+  font-size: var(--text-lg);
+  padding: var(--space-1) var(--space-2);
+  margin-left: calc(var(--space-2) * -1);
+  border-radius: var(--radius-field);
   cursor: pointer;
 }
 .masthead__btn {
   appearance: none; border: none; background: none;
-  color: var(--ink);
+  color: var(--ink-soft);
   font-family: var(--font-display);
   font-weight: var(--display-weight);
   letter-spacing: var(--display-track);
-  text-transform: uppercase;
-  font-size: 0.8rem;
-  padding: 0 10px;
+  text-transform: var(--display-transform);
+  font-size: var(--label-size);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-btn);
   cursor: pointer;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
 }
+.masthead__btn:hover { color: var(--ink); background: var(--surface-sunk); }
 .masthead__btn:active { color: var(--accent); }
 
-/* ---- CAPTURE ------------------------------------------------- */
+/* ---- CAPTURE -------------------------------------------------
+   The home screen. Not a feed with an add button. */
 .capture {
-  border-bottom: calc(var(--border) * 2) solid var(--rule);
-  margin: 0 calc(var(--pad) * -1);
-  padding: 10px var(--pad);
+  margin-top: var(--space-4);
+  padding: var(--card-pad);
+  background: var(--surface);
+  backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  border: var(--border) solid var(--hairline);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card), var(--specular);
 }
 .composer {
   width: 100%;
-  min-height: 2.2rem;
-  resize: none;
-  border: none;
-  background: transparent;
+  min-height: var(--space-6);
+  resize: none; border: none; background: transparent;
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: 1.12rem;
-  line-height: 1.3;
-  padding: 0;
-  outline: none;
+  font-size: var(--title-size);
+  font-weight: var(--title-weight);
+  line-height: var(--title-leading);
+  padding: 0; outline: none;
 }
-.composer::placeholder { color: var(--ink-faint); }
+.composer::placeholder { color: var(--ink-faint); font-weight: 400; }
 
 .capture__row {
-  display: flex; align-items: center; gap: 7px;
-  margin-top: 8px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: var(--space-2);
+  margin-top: var(--space-4); flex-wrap: wrap;
 }
 
-/* type chips — optional and deferred. Tapping one is a bonus,
-   not a gate. You can always classify later from the feed. */
+/* ---- CHIPS --------------------------------------------------- */
 .chip {
   appearance: none; cursor: pointer;
   font-family: var(--font-display);
   font-weight: var(--display-weight);
   letter-spacing: var(--display-track);
-  text-transform: uppercase;
-  font-size: 0.7rem;
-  padding: 5px 9px;
-  border: var(--border) solid var(--ink);
-  background: transparent; color: var(--ink);
-  transition: none;
+  text-transform: var(--display-transform);
+  font-size: var(--label-size);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border) solid var(--hairline);
+  border-radius: var(--radius-chip);
+  background: var(--surface-sunk);
+  color: var(--ink-soft);
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
-.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
-.chip--ghost { border-style: dashed; color: var(--ink-soft); }
+.chip:hover { color: var(--ink); }
+.chip[aria-pressed="true"] {
+  background: var(--ink); color: var(--bg); border-color: transparent;
+}
+.chip--ghost { border-style: dashed; }
 
 .spacer { flex: 1 1 auto; }
 
 .iconbtn {
   appearance: none; cursor: pointer;
-  width: 34px; height: 34px;
-  border: var(--border) solid var(--ink);
-  background: transparent; color: var(--ink);
-  display: grid; place-items: center;
-  padding: 0;
+  width: var(--space-6); height: var(--space-6);
+  min-width: 34px; min-height: 34px;
+  border: var(--border) solid var(--hairline);
+  border-radius: var(--radius-btn);
+  background: var(--surface-sunk);
+  color: var(--ink-soft);
+  display: grid; place-items: center; padding: 0;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
+.iconbtn:hover { color: var(--ink); }
 .iconbtn svg { width: 15px; height: 15px; fill: currentColor; display: block; }
-.iconbtn:active { background: var(--ink); color: var(--paper); }
+.iconbtn:active { background: var(--ink); color: var(--bg); }
 .iconbtn--rec[data-recording="true"] {
-  background: var(--accent); border-color: var(--accent); color: #fff;
+  background: var(--accent); border-color: transparent; color: #fff;
 }
 
 .commit {
@@ -148,205 +180,366 @@ body { min-height: 100dvh; }
   font-family: var(--font-display);
   font-weight: var(--display-weight);
   letter-spacing: var(--display-track);
-  text-transform: uppercase;
-  font-size: 0.78rem;
-  padding: 10px 16px;
-  border: var(--border) solid var(--ink);
-  background: var(--ink); color: var(--paper);
+  text-transform: var(--display-transform);
+  font-size: var(--label-size);
+  padding: var(--space-3) var(--space-5);
+  border: var(--border) solid transparent;
+  border-radius: var(--radius-btn);
+  background: var(--ink); color: var(--bg);
+  transition: opacity var(--dur) var(--ease);
 }
-.commit:disabled { opacity: 0.3; cursor: default; }
+.commit:disabled { opacity: 0.28; cursor: default; }
 
 .rectimer {
   font-family: var(--font-display);
   letter-spacing: var(--display-track);
-  font-size: 0.8rem;
+  font-size: var(--label-size);
   color: var(--accent);
+  font-variant-numeric: tabular-nums;
 }
 
-/* ---- LENS (ALL / BY TYPE) ------------------------------------ */
+/* ---- LENS ---------------------------------------------------- */
 .lens {
-  display: flex; gap: 0;
-  margin: 16px 0 4px;
-  border: var(--border) solid var(--ink);
+  display: flex; gap: var(--space-1);
+  margin: var(--space-6) 0 var(--space-1);
+  padding: var(--space-1);
   width: fit-content;
+  background: var(--surface-sunk);
+  border: var(--border) solid var(--hairline);
+  border-radius: var(--radius-chip);
 }
 .lens button {
-  appearance: none; cursor: pointer;
+  appearance: none; cursor: pointer; border: none;
   font-family: var(--font-display);
   font-weight: var(--display-weight);
   letter-spacing: var(--display-track);
-  text-transform: uppercase;
-  font-size: 0.7rem;
-  padding: 6px 12px;
-  background: transparent; color: var(--ink);
-  border: none;
-  border-right: var(--border) solid var(--ink);
+  text-transform: var(--display-transform);
+  font-size: var(--label-size);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-chip);
+  background: transparent; color: var(--ink-soft);
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
-.lens button:last-child { border-right: none; }
-.lens button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.lens button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
 
 /* ---- SECTION RULE -------------------------------------------- */
 .sectionrule {
-  display: flex; align-items: center; gap: 10px;
-  margin: 30px 0 12px;
+  display: flex; align-items: center; gap: var(--space-3);
+  margin: var(--space-6) 0 var(--space-3);
   font-family: var(--font-display);
   font-weight: var(--display-weight);
   letter-spacing: var(--display-track);
-  text-transform: uppercase;
-  font-size: 0.78rem;
-}
-.sectionrule::after {
-  content: ""; flex: 1; height: calc(var(--border) * 2);
-  background: var(--ink);
-}
-
-/* ---- CARDS --------------------------------------------------- */
-.feed { display: flex; flex-direction: column; gap: var(--gap); margin-top: 12px; }
-
-.card {
-  border: var(--border) solid var(--ink);
-  background: var(--paper);
-  padding: 13px 14px 11px;
-  transform: rotate(var(--card-tilt, 0deg));
-  cursor: pointer;
-}
-.card--pending { border-style: dashed; }
-.card__body {
-  font-size: 1.15rem; line-height: 1.35;
-  margin: 0 0 8px; white-space: pre-wrap; word-break: break-word;
-}
-.card__body:empty { display: none; }
-.card__body--muted { color: var(--ink-soft); font-style: italic; }
-
-.card__meta {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  font-family: var(--font-display);
-  letter-spacing: var(--display-track);
-  text-transform: uppercase;
-  font-size: 0.66rem;
+  text-transform: var(--display-transform);
+  font-size: var(--label-size);
   color: var(--ink-soft);
 }
-.card__meta .who { color: var(--ink); }
+.sectionrule::after {
+  content: ""; flex: 1; height: var(--rule-weight); background: var(--hairline);
+}
+
+/* ---- CARDS ---------------------------------------------------
+   Default treatment is "raised": fill and shadow, no outline.
+   Three visible containers per card (fill + border + shadow) is
+   one too many. See the variants at the bottom. */
+.feed {
+  display: flex; flex-direction: column;
+  gap: var(--gap);
+  margin-top: var(--space-4);
+}
+
+.card {
+  padding: var(--card-pad);
+  background: var(--surface);
+  backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  border: var(--border) solid transparent;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card), var(--specular);
+  transform: rotate(var(--card-tilt, 0deg));
+  cursor: pointer;
+  transition: box-shadow var(--dur) var(--ease);
+}
+.card:hover { box-shadow: var(--shadow-lift), var(--specular); }
+.card--pending { border-color: var(--hairline-strong); border-style: dashed; }
+
+/* The idea itself. Biggest thing on the card by a wide margin —
+   this is the content, everything else is chrome. */
+.card__body {
+  font-size: var(--title-size);
+  font-weight: var(--title-weight);
+  line-height: var(--title-leading);
+  letter-spacing: -0.011em;
+  margin: 0 0 var(--space-4);
+  white-space: pre-wrap; word-break: break-word;
+}
+.card__body:empty { display: none; }
+.card__body--muted { color: var(--ink-soft); font-style: italic; font-weight: 400; }
+
+/* Gap between the idea and its metadata is deliberately much
+   larger than the gap between metadata items. That's what makes
+   the card read as two groups instead of five loose elements. */
+.card__meta {
+  display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: var(--display-track);
+  text-transform: var(--display-transform);
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+.card__meta .who { color: var(--ink-soft); font-weight: var(--display-weight); }
 .card__meta .type {
-  border: var(--border) solid var(--ink-faint);
-  padding: 2px 6px; color: var(--ink);
+  border: var(--border) solid var(--hairline);
+  border-radius: var(--radius-chip);
+  padding: var(--space-1) var(--space-2);
+  color: var(--ink-soft);
 }
 .card__meta .pendingmark { color: var(--accent); }
 
-/* ---- BLOCK WAVEFORM -----------------------------------------
-   A row of solid blocks, not a smooth waveform. A waveform is a
-   data visualisation; this is a printed object.
-*/
+/* ---- WAVEFORM ------------------------------------------------ */
 .wave {
-  display: flex; align-items: flex-end; gap: 2px;
-  height: 26px; margin: 4px 0 9px; cursor: pointer;
+  display: flex; align-items: center; gap: 2px;
+  height: var(--space-6); margin: 0 0 var(--space-4); cursor: pointer;
 }
 .wave i {
-  display: block; width: 3px; background: var(--ink); flex: none;
+  display: block; width: var(--wave-width); flex: none;
+  background: var(--ink-faint);
+  border-radius: var(--wave-radius);
+  transition: background var(--dur) var(--ease);
 }
+.wave:hover i { background: var(--ink-soft); }
 .wave[data-playing="true"] i { background: var(--accent); }
 .wave__time {
-  font-family: var(--font-display); letter-spacing: var(--display-track);
-  font-size: 0.66rem; color: var(--ink-soft); margin-left: 8px;
-  align-self: center;
+  font-family: var(--font-display);
+  letter-spacing: var(--display-track);
+  font-size: var(--text-xs);
+  color: var(--ink-faint); margin-left: var(--space-3);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- PHOTO --------------------------------------------------- */
 .photo {
   display: block; width: 100%; height: auto;
-  margin: 4px 0 9px;
+  margin: 0 0 var(--space-4);
   filter: var(--photo-filter);
-  border: var(--border) solid var(--ink);
+  border: var(--border) solid var(--hairline);
+  border-radius: calc(var(--radius-card) / 2);
 }
 
 /* ---- THREAD -------------------------------------------------- */
-.thread { margin: 10px 0 0; border-left: calc(var(--border) * 2) solid var(--ink); padding-left: 11px; }
-.reply { margin: 0 0 8px; font-size: 1rem; }
+.thread {
+  margin: var(--space-4) 0 0;
+  border-left: var(--rule-weight) solid var(--hairline-strong);
+  padding-left: var(--space-3);
+  text-align: left;
+}
+.reply { margin: 0 0 var(--space-2); font-size: var(--text-sm); }
 .reply__who {
-  font-family: var(--font-display); letter-spacing: var(--display-track);
-  text-transform: uppercase; font-size: 0.64rem; color: var(--ink-soft);
-  margin-right: 6px;
+  font-family: var(--font-display); font-weight: var(--display-weight);
+  letter-spacing: var(--display-track);
+  text-transform: var(--display-transform);
+  font-size: var(--text-xs);
+  color: var(--ink-faint); margin-right: var(--space-2);
 }
-.replybox {
-  display: flex; gap: 6px; margin-top: 8px;
-}
+.replybox { display: flex; gap: var(--space-2); margin-top: var(--space-3); }
 .replybox input {
-  flex: 1; border: var(--border) solid var(--ink-faint); background: transparent;
-  color: var(--ink); font-family: var(--font-body); font-size: 0.95rem;
-  padding: 7px 8px; outline: none;
+  flex: 1;
+  border: var(--border) solid var(--hairline);
+  border-radius: var(--radius-field);
+  background: var(--surface-sunk);
+  color: var(--ink);
+  font-family: var(--font-body); font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3); outline: none;
+  transition: border-color var(--dur) var(--ease);
 }
-.replybox input:focus { border-color: var(--ink); }
+.replybox input:focus { border-color: var(--hairline-strong); }
 
-/* ---- SHUFFLE ------------------------------------------------- */
+/* ---- DETAIL / SHUFFLE ---------------------------------------- */
 .shuffle {
-  position: fixed; inset: 0; z-index: 8000;
-  background: var(--paper);
+  position: fixed; inset: 0; z-index: 800;
   display: grid; grid-template-rows: auto 1fr auto;
-  padding: var(--pad);
+  padding: max(var(--pad), env(safe-area-inset-top)) var(--pad)
+           max(var(--pad), env(safe-area-inset-bottom));
+  background: var(--surface-strong);
+  backdrop-filter: blur(calc(var(--blur) * 2)) saturate(var(--saturate));
+  -webkit-backdrop-filter: blur(calc(var(--blur) * 2)) saturate(var(--saturate));
 }
+@supports not (backdrop-filter: blur(1px)) { .shuffle { background: var(--bg); } }
 .shuffle[hidden] { display: none; }
+
 .shuffle__label {
   font-family: var(--font-display); font-weight: var(--display-weight);
-  letter-spacing: var(--display-track); text-transform: uppercase;
-  font-size: 0.75rem; color: var(--accent);
+  letter-spacing: var(--display-track);
+  text-transform: var(--display-transform);
+  font-size: var(--label-size); color: var(--accent);
 }
 .shuffle__body {
   display: grid; place-items: center; text-align: center;
-  font-size: clamp(1.6rem, 7vw, 2.6rem); line-height: 1.2;
-  padding: 1rem 0; word-break: break-word;
+  font-size: clamp(var(--text-xl), 6.4vw, var(--text-2xl));
+  font-weight: var(--title-weight);
+  line-height: var(--title-leading);
+  letter-spacing: -0.02em;
+  padding: var(--space-5) 0; word-break: break-word;
+  overflow-y: auto;
 }
-.shuffle__foot { display: flex; gap: 8px; align-items: center; }
+.shuffle__foot { display: flex; gap: var(--space-2); align-items: center; }
 
 /* ---- ONE YEAR AGO -------------------------------------------- */
 .throwback {
-  border: calc(var(--border) * 2) solid var(--accent);
-  padding: 12px 14px;
+  padding: var(--card-pad);
+  border: var(--rule-weight) solid var(--accent);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  cursor: pointer;
 }
 .throwback__label {
   font-family: var(--font-display); font-weight: var(--display-weight);
-  letter-spacing: var(--display-track); text-transform: uppercase;
-  font-size: 0.68rem; color: var(--accent); margin-bottom: 6px;
+  letter-spacing: var(--display-track);
+  text-transform: var(--display-transform);
+  font-size: var(--label-size); color: var(--accent);
+  margin-bottom: var(--space-2);
 }
 
 /* ---- AUTH / SETTINGS ----------------------------------------- */
-.sheet { padding: 4rem 0 2rem; }
+.sheet { padding: var(--space-7) 0 var(--space-6); }
 .sheet h1 {
   font-family: var(--font-display); font-weight: var(--display-weight);
-  letter-spacing: var(--display-track); text-transform: uppercase;
-  font-size: 2rem; margin: 0 0 4px;
+  letter-spacing: -0.02em;
+  text-transform: var(--display-transform);
+  font-size: var(--text-2xl); margin: 0 0 var(--space-2);
 }
-.sheet p { color: var(--ink-soft); margin: 0 0 22px; }
+.sheet p { color: var(--ink-soft); margin: 0 0 var(--space-5); }
+
 .field {
-  width: 100%; border: var(--border) solid var(--ink); background: transparent;
-  color: var(--ink); font-family: var(--font-body); font-size: 1.05rem;
-  padding: 11px 12px; outline: none; margin-bottom: 10px;
+  width: 100%;
+  border: var(--border) solid var(--hairline);
+  border-radius: var(--radius-field);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body); font-size: var(--text-md);
+  padding: var(--space-3) var(--space-4); outline: none;
+  margin-bottom: var(--space-3);
+  transition: border-color var(--dur) var(--ease);
 }
+.field:focus { border-color: var(--hairline-strong); }
+
 .row {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; padding: 13px 0;
-  border-bottom: var(--border) solid var(--ink-faint);
+  gap: var(--space-3); padding: var(--space-4) 0;
+  border-bottom: var(--border) solid var(--hairline);
 }
-.row__label { font-family: var(--font-display); letter-spacing: var(--display-track); text-transform: uppercase; font-size: 0.78rem; }
+.row__label {
+  font-family: var(--font-display); font-weight: var(--display-weight);
+  letter-spacing: var(--display-track);
+  text-transform: var(--display-transform);
+  font-size: var(--text-sm);
+}
 
 .empty {
-  text-align: center; padding: 3.5rem 1rem;
+  text-align: center; padding: var(--space-7) var(--space-4);
   color: var(--ink-faint);
-  font-family: var(--font-display); letter-spacing: var(--display-track);
-  text-transform: uppercase; font-size: 0.8rem;
+  font-family: var(--font-display);
+  letter-spacing: var(--display-track);
+  text-transform: var(--display-transform);
+  font-size: var(--label-size);
 }
 
 /* ---- OFFLINE BANNER ------------------------------------------ */
 .offline {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+  z-index: 60;
   background: var(--accent); color: #fff;
-  font-family: var(--font-display); letter-spacing: var(--display-track);
-  text-transform: uppercase; font-size: 0.7rem;
-  padding: 7px var(--pad); text-align: center;
+  font-family: var(--font-display); font-weight: var(--display-weight);
+  letter-spacing: var(--display-track);
+  text-transform: var(--display-transform);
+  font-size: var(--label-size);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-chip);
+  box-shadow: var(--shadow-lift);
+  white-space: nowrap;
 }
 .offline[hidden] { display: none; }
 
 [hidden] { display: none !important; }
-
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
+}
+
+/* ============================================================
+   STRUCTURAL VARIANTS
+   Set on <body>. These change what the thing IS, not just how
+   it's coloured — which is why they live here and not in a
+   theme file. Try them in playground.html.
+   ============================================================ */
+
+/* ---- CARD TREATMENT ---- */
+
+/* Adds the outline back on top of fill + shadow. */
+[data-cards="bordered"] .card { border-color: var(--hairline); }
+
+/* Fill only. Quiet, works well at high density. */
+[data-cards="flat"] .card { box-shadow: none; }
+[data-cards="flat"] .card:hover { box-shadow: none; background: var(--surface-strong); }
+
+/* No containers at all — entries separated by a hairline. The
+   most editorial option and the one that gives the most air. */
+[data-cards="divided"] .feed { gap: 0; }
+[data-cards="divided"] .card {
+  background: none; box-shadow: none; backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none; border-bottom: var(--border) solid var(--hairline);
+  border-radius: 0;
+  padding: var(--space-5) 0;
+}
+[data-cards="divided"] .card:hover { box-shadow: none; }
+[data-cards="divided"] .card:last-child { border-bottom: none; }
+
+/* Nothing but content and generous space between entries. */
+[data-cards="naked"] .feed { gap: var(--space-6); }
+[data-cards="naked"] .card {
+  background: none; box-shadow: none; backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none; border-radius: 0; padding: 0;
+}
+[data-cards="naked"] .card:hover { box-shadow: none; }
+
+/* The throwback follows whatever the cards are doing — a boxed
+   entry floating in a borderless feed reads as a mistake. The
+   accent label is enough to mark it as special. */
+[data-cards="divided"] .throwback,
+[data-cards="naked"] .throwback {
+  background: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+  border: none; border-radius: 0;
+}
+[data-cards="divided"] .throwback {
+  padding: var(--space-5) 0;
+  border-bottom: var(--border) solid var(--hairline);
+}
+[data-cards="naked"] .throwback { padding: 0; }
+
+/* ---- METADATA DENSITY ---- */
+
+/* Who and when only. Type and reply count are recoverable by
+   opening the entry, so they don't need to shout from the feed. */
+[data-meta="minimal"] .card__meta .type,
+[data-meta="minimal"] .card__meta .replies { display: none; }
+
+/* Date only. Maximum quiet — you mostly know who said what. */
+[data-meta="quiet"] .card__meta .type,
+[data-meta="quiet"] .card__meta .replies,
+[data-meta="quiet"] .card__meta .who { display: none; }
+
+/* ---- CAPTURE TREATMENT ---- */
+
+/* No container. The input sits directly on the page, which
+   makes the app feel like a document rather than a form. */
+[data-capture="bare"] .capture {
+  background: none; box-shadow: none; border: none;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  border-radius: 0;
+  padding: var(--space-5) 0 var(--space-4);
+  border-bottom: var(--border) solid var(--hairline);
 }

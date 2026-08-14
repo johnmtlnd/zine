@@ -1,0 +1,50 @@
+# ============================================================
+#  Keep the database awake
+#
+#  Supabase pauses free projects after about a week of no
+#  activity. Your data is safe and resuming is two clicks, but
+#  the app just stops working until someone notices — which for
+#  two people who might not have an idea for a fortnight is a
+#  real problem, not a hypothetical one.
+#
+#  This pings the database once a day so it never looks idle.
+#
+#  SETUP: repo → Settings → Secrets and variables → Actions →
+#  New repository secret. Add two:
+#    SUPABASE_URL       your https://xxxx.supabase.co address
+#    SUPABASE_ANON_KEY  the long anon public key
+#
+#  (These are the same values that are already public in
+#  config.js. They're secrets here only because that's how
+#  Actions passes values around.)
+#
+#  ONE CAVEAT, honestly: GitHub disables scheduled jobs on
+#  repos with no commits for 60 days. It emails you a link to
+#  switch it back on. So this reduces the babysitting a lot,
+#  but it doesn't eliminate it entirely.
+# ============================================================
+
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: "17 12 * * *"   # once a day, 12:17 UTC
+  workflow_dispatch:         # and a manual button in the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Touch the database
+        run: |
+          code=$(curl -sS -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/entry_types?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "Supabase replied $code"
+          # 200 means it ran the query. Row-level security returns
+          # an empty list to an unauthenticated caller, which is
+          # correct and still counts as activity.
+          if [ "$code" != "200" ]; then
+            echo "::error::Expected 200, got $code — check the two secrets."
+            exit 1
+          fi

@@ -108,7 +108,7 @@ async def main():
         check("throwback shown (1yr ago today)", await pg.locator(".throwback").count() == 1)
         check("transcript fallback italic", await pg.locator(".card__body--muted").count() >= 1)
         check("waveform for audio entry", await pg.locator(".wave").count() == 1)
-        check("masthead name from config", (await pg.inner_text("#masthead-name")).strip() == "MERCH TABLE")
+        check("masthead name from config", (await pg.inner_text("#masthead-name")).strip().lower() == "offcuts")
         await pg.screenshot(path="/tmp/feed.png", full_page=False)
 
         # tilt is seeded => stable across reloads
@@ -116,7 +116,31 @@ async def main():
         await pg.reload(); await pg.wait_for_timeout(1500)
         t2 = await pg.locator(".card").first.evaluate("e=>getComputedStyle(e).transform")
         check("card tilt is stable across reloads", t1 == t2, f"{t1} vs {t2}")
-        check("tilt actually applied", t1 not in ("none", "matrix(1, 0, 0, 1, 0, 0)"), t1)
+        # Tilt is theme-dependent — the zine theme sets it, glass zeroes it.
+        # Assert against whatever the active theme actually declares.
+        tilt_token = await pg.evaluate(
+            "parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tilt'))")
+        flat = t1 in ("none", "matrix(1, 0, 0, 1, 0, 0)")
+        check("tilt matches the active theme",
+              (tilt_token == 0) == flat, f"--tilt:{tilt_token} transform:{t1}")
+
+        # Every token the component layer reads must exist, or the
+        # themes aren't actually interchangeable.
+        missing = await pg.evaluate("""() => {
+          const s = getComputedStyle(document.documentElement);
+          return ['--bg','--field-1','--field-2','--ink','--ink-soft','--ink-faint',
+                  '--accent','--surface','--surface-strong','--surface-sunk','--blur',
+                  '--saturate','--specular','--hairline','--hairline-strong','--border',
+                  '--rule-weight','--shadow-card','--shadow-lift','--masthead-fill',
+                  '--masthead-ink','--font-display','--font-body','--display-weight',
+                  '--display-track','--display-transform','--label-size','--body-size',
+                  '--body-leading','--title-size','--radius-card','--radius-chip',
+                  '--radius-btn','--radius-field','--pad','--card-pad','--gap','--space-unit','--density','--space-1','--space-4','--space-7','--text-base','--ratio','--text-xs','--text-sm','--text-lg','--text-xl','--text-2xl','--title-weight','--title-leading',
+                  '--measure','--tilt','--grain','--halftone','--dot-size',
+                  '--photo-filter','--wave-radius','--wave-width','--dur','--ease']
+            .filter(t => s.getPropertyValue(t).trim() === '');
+        }""")
+        check("theme defines every token app.css reads", not missing, str(missing))
 
         # BY TYPE lens
         await pg.click("#lens-type"); await pg.wait_for_timeout(400)
@@ -186,8 +210,19 @@ async def main():
         await pg.emulate_media(color_scheme="dark")
         await pg.wait_for_timeout(400)
         await pg.screenshot(path="/tmp/dark.png")
-        bg = await pg.evaluate("getComputedStyle(document.body).backgroundColor")
-        check("dark mode inverts", "12, 12, 12" in bg, bg)
+        # Theme-agnostic: whatever the theme, dark must actually be dark
+        # and text must actually be light. Hardcoding a hex here would
+        # just break every time the palette moves.
+        lum = await pg.evaluate("""() => {
+          const rgb = s => s.match(/\\d+/g).slice(0,3).map(Number);
+          const L = ([r,g,b]) => (0.2126*r + 0.7152*g + 0.0722*b) / 255;
+          const cs = getComputedStyle(document.body);
+          return { bg: L(rgb(cs.backgroundColor)), fg: L(rgb(cs.color)) };
+        }""")
+        check("dark mode: background is dark", lum["bg"] < 0.25, str(lum))
+        check("dark mode: text is light", lum["fg"] > 0.75, str(lum))
+        check("dark mode: text/background actually contrast",
+              lum["fg"] - lum["bg"] > 0.5, str(lum))
 
         check("no JS errors anywhere", len(errs) == 0, "; ".join(errs[:5]))
 

@@ -514,11 +514,13 @@ function card(i) {
   if (i.photo_path || i._localPhoto) c.appendChild(photo(i));
 
   const m = el("div", "card__meta");
+  // Classed individually so the data-meta variants can hide
+  // them selectively without touching this code.
   m.appendChild(el("span", "who", i.author_name || "—"));
-  m.appendChild(el("span", null, when(i.created_at)));
+  m.appendChild(el("span", "when", when(i.created_at)));
   // redundant when the section rule above already says the type
   if (i.type_label && S.lens !== "type") m.appendChild(el("span", "type", i.type_label));
-  if (i.reply_count > 0) m.appendChild(el("span", null, `${i.reply_count} ${i.reply_count === 1 ? "reply" : "replies"}`));
+  if (i.reply_count > 0) m.appendChild(el("span", "replies", `${i.reply_count} ${i.reply_count === 1 ? "reply" : "replies"}`));
   if (i._pending) m.appendChild(el("span", "pendingmark", "not synced"));
   c.appendChild(m);
 
@@ -587,9 +589,9 @@ async function openDetail(id, isShuffle = false) {
   if (isShuffle) {
     const m = el("div", "card__meta");
     m.style.justifyContent = "center";
-    m.style.marginTop = "14px";
+    m.style.marginTop = "var(--space-4)";
     m.appendChild(el("span", "who", i.author_name || "—"));
-    m.appendChild(el("span", null, when(i.created_at)));
+    m.appendChild(el("span", "when", when(i.created_at)));
     if (i.type_label) m.appendChild(el("span", "type", i.type_label));
     inner.appendChild(m);
   }

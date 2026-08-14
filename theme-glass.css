@@ -1,0 +1,207 @@
+/* ============================================================
+   THEME — LIQUID GLASS
+   The active theme. Swap it in index.html for theme-zine.css
+   to get the photocopy version back.
+
+   Everything visual is a variable in here. app.css is the
+   component layer and is aesthetic-neutral — you shouldn't
+   need to open it.
+
+   One thing worth knowing before you tune: glass only reads if
+   there's something behind it to refract. That's what the two
+   --field gradients are for. Flatten them to the same value as
+   --bg and every blur in the app goes invisible.
+   ============================================================ */
+
+:root {
+
+  /* ---- SURFACE -----------------------------------------------
+     Neutral grays. The two field colours are wide, soft blooms
+     sitting behind everything, so the sticky header and the
+     cards have something to pick up as you scroll.
+  */
+  --bg:        #EEEFF2;
+  --field-1:   #E3E7EF;   /* cool bloom, top left */
+  --field-2:   #EFE9E9;   /* warm bloom, bottom right */
+
+  --ink:       #16171A;
+  /* Don't drop these much lower. Metadata at 26% looked elegant
+     and was borderline unreadable — glass surfaces already eat
+     contrast, so secondary text has to start higher than it
+     would on a solid background. */
+  --ink-soft:  color-mix(in srgb, var(--ink) 64%, transparent);
+  --ink-faint: color-mix(in srgb, var(--ink) 44%, transparent);
+  --accent:    #E5484D;
+
+  /* ---- GLASS -------------------------------------------------
+     --surface is the fill; --blur and --saturate are what make
+     it glass rather than a tinted box. Saturation above 100% is
+     the trick that stops blurred backdrops going muddy.
+
+     --specular is the bright top edge — the single detail that
+     separates real glass from a 2015 frosted div. Keep it.
+  */
+  --surface:        rgba(255, 255, 255, 0.62);
+  --surface-strong: rgba(255, 255, 255, 0.80);
+  --surface-sunk:   rgba(255, 255, 255, 0.40);
+  --blur:           22px;
+  --saturate:       180%;
+  --specular:       inset 0 1px 0 rgba(255, 255, 255, 0.85);
+
+  --hairline:        rgba(0, 0, 0, 0.07);
+  --hairline-strong: rgba(0, 0, 0, 0.13);
+  --border:          1px;
+  --rule-weight:     1px;
+
+  --shadow-card: 0 1px 2px rgba(16, 18, 24, 0.05),
+                 0 8px 24px rgba(16, 18, 24, 0.06);
+  --shadow-lift: 0 2px 6px rgba(16, 18, 24, 0.07),
+                 0 18px 48px rgba(16, 18, 24, 0.11);
+
+  /* The masthead is glass too, not a solid slab. */
+  --masthead-fill: transparent;
+  --masthead-ink:  var(--ink);
+
+  /* ---- TYPE --------------------------------------------------
+     One family doing both jobs, differentiated by weight and
+     size rather than by being two different typefaces. That's
+     the modern-system-UI move and it's why this reads current.
+
+     System stack, so it loads instantly and matches whatever
+     device it's on — SF on iPhone, Segoe on Windows, Roboto on
+     Android.
+  */
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                  "Segoe UI", Inter, system-ui, sans-serif;
+  --font-body:    -apple-system, BlinkMacSystemFont, "SF Pro Text",
+                  "Segoe UI", Inter, system-ui, sans-serif;
+
+  --display-weight:    650;
+  --display-track:     -0.01em;   /* tight, the way UI type wants */
+  --display-transform: none;      /* sentence case, not shouting */
+
+  /* ---- TYPE SCALE --------------------------------------------
+     Every size derives from a base and a ratio. Change --ratio
+     and the whole hierarchy re-proportions at once, which is the
+     entire point of having a scale instead of picking numbers.
+
+     1.25 (major third) is a good default for UI. Go to 1.333 for
+     more drama, 1.2 for something calmer and denser.
+  */
+  --text-base:  1rem;
+  --ratio:      1.25;
+
+  --text-xs:  calc(var(--text-base) / var(--ratio) / var(--ratio));
+  --text-sm:  calc(var(--text-base) / var(--ratio));
+  --text-md:  var(--text-base);
+  --text-lg:  calc(var(--text-base) * var(--ratio));
+  --text-xl:  calc(var(--text-base) * var(--ratio) * var(--ratio));
+  --text-2xl: calc(var(--text-base) * var(--ratio) * var(--ratio) * var(--ratio));
+
+  --label-size:   var(--text-sm);
+  --body-size:    var(--text-md);
+  --body-leading: 1.5;
+
+  /* The idea itself. This is the most important number in the
+     file — it's what stops a band name reading like a form
+     label. It should dominate the card. */
+  --title-size:    var(--text-xl);
+  --title-weight:  520;
+  --title-leading: 1.22;
+
+  /* ---- SPACING SCALE -----------------------------------------
+     One unit, everything else a multiple. --density scales the
+     whole system at once: 0.85 for compact, 1.15 for airy.
+  */
+  --space-unit: 4px;
+  --density:    1;
+
+  --space-1: calc(var(--space-unit) * 1  * var(--density));   /*  4 */
+  --space-2: calc(var(--space-unit) * 2  * var(--density));   /*  8 */
+  --space-3: calc(var(--space-unit) * 3  * var(--density));   /* 12 */
+  --space-4: calc(var(--space-unit) * 4  * var(--density));   /* 16 */
+  --space-5: calc(var(--space-unit) * 6  * var(--density));   /* 24 */
+  --space-6: calc(var(--space-unit) * 8  * var(--density));   /* 32 */
+  --space-7: calc(var(--space-unit) * 12 * var(--density));   /* 48 */
+
+  /* ---- SHAPE -------------------------------------------------
+     Generous radii. The pill on buttons and chips is what makes
+     a UI read as 2026 rather than 2019.
+  */
+  --radius-card:  22px;
+  --radius-sheet: 28px;
+  --radius-chip:  999px;
+  --radius-btn:   999px;
+  --radius-field: 14px;
+
+  --pad:      var(--space-5);   /* page gutter */
+  --card-pad: var(--space-5);   /* inside a card */
+  --gap:      var(--space-3);   /* between cards */
+  --measure:  34rem;
+
+  --tilt: 0deg;       /* the crooked-paper effect. Off here. */
+
+  /* ---- TEXTURE -----------------------------------------------
+     Photocopy grain and halftone, both off. Set --grain to
+     about 0.04 if you want the faintest film — it stops large
+     flat areas from banding on cheap screens.
+  */
+  --grain:    0;
+  --halftone: 0;
+  --dot-size: 3px;
+
+  /* ---- MEDIA -------------------------------------------------
+     Photos render as themselves. The zine theme dithers them to
+     halftone instead.
+  */
+  --photo-filter: none;
+  --wave-radius:  2px;
+  --wave-width:   3px;
+
+  /* ---- MOTION ------------------------------------------------
+     Glass moves. Not much, but it eases rather than cuts —
+     the opposite of the photocopy rule.
+  */
+  --dur:  180ms;
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* ---- DARK --------------------------------------------------
+   Near-black rather than true black, so the glass has tonal
+   room to sit above the background. On true black, translucent
+   white surfaces just look gray and the depth collapses.
+*/
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:      #121316;
+    --field-1: #191D26;
+    --field-2: #221B1E;
+
+    --ink:     #F2F3F5;
+    --accent:  #FF6369;
+
+    --surface:        rgba(255, 255, 255, 0.07);
+    --surface-strong: rgba(255, 255, 255, 0.11);
+    --surface-sunk:   rgba(255, 255, 255, 0.04);
+    --specular:       inset 0 1px 0 rgba(255, 255, 255, 0.10);
+
+    --hairline:        rgba(255, 255, 255, 0.09);
+    --hairline-strong: rgba(255, 255, 255, 0.16);
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.32),
+                   0 8px 24px rgba(0, 0, 0, 0.30);
+    --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.40),
+                   0 18px 48px rgba(0, 0, 0, 0.46);
+  }
+}
+
+/* Windows high-contrast and anyone who's asked for reduced
+   transparency get solid surfaces. Glass is decoration; text
+   being readable is not. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --surface:        var(--bg);
+    --surface-strong: var(--bg);
+    --blur:           0px;
+  }
+}

@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offcuts — design playground</title>
+
+<!-- The real stylesheets. Nothing here is a mockup: the preview
+     below uses the same class names the app uses, so what you
+     see is what ships. -->
+<link rel="stylesheet" href="theme-glass.css" id="theme-link">
+<link rel="stylesheet" href="app.css">
+
+<style>
+/* ── Playground chrome only. None of this ships. ───────────── */
+.pg { display: grid; grid-template-columns: 340px 1fr; min-height: 100dvh; }
+@media (max-width: 900px) { .pg { grid-template-columns: 1fr; } }
+
+.pg__panel {
+  background: #16171A; color: #E8E9EC;
+  font: 13px/1.45 ui-sans-serif, -apple-system, system-ui, sans-serif;
+  padding: 20px; overflow-y: auto; max-height: 100dvh;
+  position: sticky; top: 0;
+}
+@media (max-width: 900px) { .pg__panel { position: static; max-height: none; } }
+
+.pg__panel h1 { font-size: 15px; margin: 0 0 3px; letter-spacing: -0.01em; }
+.pg__panel .sub { color: #8A8D96; margin: 0 0 20px; font-size: 12px; }
+.pg__panel h2 {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .1em;
+  color: #8A8D96; margin: 22px 0 9px;
+  padding-bottom: 6px; border-bottom: 1px solid #2A2C33;
+}
+.pg__row { display: flex; align-items: center; gap: 9px; margin: 9px 0; }
+.pg__row label { flex: 0 0 106px; color: #B6B9C2; font-size: 12px; }
+.pg__row input[type=range] { flex: 1; accent-color: #E5484D; min-width: 0; }
+.pg__row input[type=color] {
+  width: 34px; height: 24px; padding: 0; border: 1px solid #2A2C33;
+  border-radius: 5px; background: none;
+}
+.pg__row output {
+  flex: 0 0 54px; text-align: right; color: #7E828C;
+  font-variant-numeric: tabular-nums; font-size: 11px;
+}
+.pg__seg { display: flex; flex-wrap: wrap; gap: 4px; margin: 7px 0 3px; }
+.pg__seg button {
+  flex: 1 1 auto; padding: 6px 8px; font-size: 11px; cursor: pointer;
+  background: #202229; color: #B6B9C2;
+  border: 1px solid #2A2C33; border-radius: 7px;
+}
+.pg__seg button[aria-pressed="true"] { background: #E5484D; color: #fff; border-color: #E5484D; }
+.pg__note { color: #6E727C; font-size: 11px; margin: 5px 0 0; line-height: 1.4; }
+
+.pg__actions { display: flex; gap: 7px; margin-top: 22px; }
+.pg__actions button {
+  flex: 1; padding: 10px; font-size: 12px; cursor: pointer; font-weight: 600;
+  background: #E8E9EC; color: #16171A; border: none; border-radius: 8px;
+}
+.pg__actions button.ghost { background: #202229; color: #B6B9C2; }
+
+.pg__out {
+  width: 100%; height: 190px; margin-top: 12px;
+  background: #0E0F12; color: #9FE8B0; border: 1px solid #2A2C33;
+  border-radius: 8px; padding: 10px;
+  font: 11px/1.5 ui-monospace, Menlo, monospace;
+  white-space: pre; overflow: auto; display: none;
+}
+
+.pg__stage { overflow-y: auto; max-height: 100dvh; }
+.pg__frame { max-width: 430px; margin: 0 auto; }
+</style>
+</head>
+
+<body data-cards="raised" data-meta="minimal" data-capture="card">
+<div class="texture" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<div class="pg">
+
+  <!-- ══════════ CONTROLS ══════════ -->
+  <aside class="pg__panel">
+    <h1>Design playground</h1>
+    <p class="sub">Live. Uses the real stylesheets — what you see ships.</p>
+
+    <h2>Structure</h2>
+    <div class="pg__row" style="display:block">
+      <label style="display:block;margin-bottom:2px">Card treatment</label>
+      <div class="pg__seg" data-attr="data-cards">
+        <button data-v="raised">Raised</button>
+        <button data-v="bordered">Bordered</button>
+        <button data-v="flat">Flat</button>
+        <button data-v="divided">Divided</button>
+        <button data-v="naked">Naked</button>
+      </div>
+      <p class="pg__note">Divided and Naked drop the container entirely. They're where the air is.</p>
+    </div>
+
+    <div class="pg__row" style="display:block">
+      <label style="display:block;margin-bottom:2px">Metadata</label>
+      <div class="pg__seg" data-attr="data-meta">
+        <button data-v="full">Full</button>
+        <button data-v="minimal">Minimal</button>
+        <button data-v="quiet">Quiet</button>
+      </div>
+    </div>
+
+    <div class="pg__row" style="display:block">
+      <label style="display:block;margin-bottom:2px">Capture</label>
+      <div class="pg__seg" data-attr="data-capture">
+        <button data-v="card">Card</button>
+        <button data-v="bare">Bare</button>
+      </div>
+    </div>
+
+    <h2>Space</h2>
+    <div class="pg__row"><label>Base unit</label>
+      <input type="range" id="c-unit" min="3" max="7" step="0.5" value="4"><output></output></div>
+    <div class="pg__row"><label>Density</label>
+      <input type="range" id="c-density" min="0.7" max="1.6" step="0.05" value="1"><output></output></div>
+    <div class="pg__row"><label>Card padding</label>
+      <input type="range" id="c-cardpad" min="8" max="40" step="1" value="24"><output></output></div>
+    <div class="pg__row"><label>Between cards</label>
+      <input type="range" id="c-gap" min="0" max="40" step="1" value="12"><output></output></div>
+    <div class="pg__row"><label>Measure</label>
+      <input type="range" id="c-measure" min="24" max="52" step="1" value="34"><output></output></div>
+
+    <h2>Type</h2>
+    <div class="pg__row"><label>Base size</label>
+      <input type="range" id="c-textbase" min="0.85" max="1.25" step="0.01" value="1"><output></output></div>
+    <div class="pg__row"><label>Scale ratio</label>
+      <input type="range" id="c-ratio" min="1.1" max="1.5" step="0.01" value="1.25"><output></output></div>
+    <div class="pg__row"><label>Idea weight</label>
+      <input type="range" id="c-titleweight" min="300" max="800" step="10" value="520"><output></output></div>
+    <div class="pg__row"><label>Idea leading</label>
+      <input type="range" id="c-titleleading" min="1" max="1.6" step="0.01" value="1.22"><output></output></div>
+    <p class="pg__note">Ratio drives the whole hierarchy at once. The idea sits at base × ratio².</p>
+
+    <h2>Surface</h2>
+    <div class="pg__row"><label>Card radius</label>
+      <input type="range" id="c-radius" min="0" max="34" step="1" value="22"><output></output></div>
+    <div class="pg__row"><label>Blur</label>
+      <input type="range" id="c-blur" min="0" max="50" step="1" value="22"><output></output></div>
+    <div class="pg__row"><label>Saturate</label>
+      <input type="range" id="c-sat" min="100" max="260" step="5" value="180"><output></output></div>
+    <div class="pg__row"><label>Fill opacity</label>
+      <input type="range" id="c-surface" min="0" max="100" step="1" value="62"><output></output></div>
+    <div class="pg__row"><label>Shadow</label>
+      <input type="range" id="c-shadow" min="0" max="200" step="5" value="100"><output></output></div>
+
+    <h2>Colour</h2>
+    <div class="pg__row"><label>Background</label>
+      <input type="color" id="c-bg" value="#eeeff2"><output></output></div>
+    <div class="pg__row"><label>Bloom A</label>
+      <input type="color" id="c-f1" value="#e3e7ef"><output></output></div>
+    <div class="pg__row"><label>Bloom B</label>
+      <input type="color" id="c-f2" value="#efe9e9"><output></output></div>
+    <div class="pg__row"><label>Ink</label>
+      <input type="color" id="c-ink" value="#16171a"><output></output></div>
+    <div class="pg__row"><label>Accent</label>
+      <input type="color" id="c-accent" value="#e5484d"><output></output></div>
+    <p class="pg__note">Pull the two blooms apart in hue to make the blur visible. Match them to the background and the glass disappears.</p>
+
+    <h2>Preview</h2>
+    <div class="pg__seg" id="pg-theme">
+      <button data-t="theme-glass.css">Glass</button>
+      <button data-t="theme-zine.css">Zine</button>
+    </div>
+    <p class="pg__note">Switching theme resets the sliders to that theme's own values.</p>
+
+    <div class="pg__actions">
+      <button id="pg-export">Export CSS</button>
+      <button id="pg-reset" class="ghost">Reset</button>
+    </div>
+    <pre class="pg__out" id="pg-out"></pre>
+  </aside>
+
+  <!-- ══════════ PREVIEW ══════════ -->
+  <main class="pg__stage">
+    <div class="pg__frame wrap">
+
+      <header class="masthead">
+        <div class="masthead__name">Offcuts</div>
+        <button class="masthead__btn">Shuffle</button>
+        <button class="masthead__btn">···</button>
+      </header>
+
+      <section class="capture">
+        <textarea class="composer" rows="1" placeholder="Band name, shirt, whatever…"></textarea>
+        <div class="capture__row">
+          <button class="chip" aria-pressed="true">Band name</button>
+          <button class="chip">T-shirt</button>
+          <button class="chip">Hat</button>
+          <button class="chip">Other</button>
+        </div>
+        <div class="capture__row">
+          <button class="iconbtn"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/></svg></button>
+          <button class="iconbtn"><svg viewBox="0 0 16 16"><path d="M0 3h4l1-1.5h6L12 3h4v11H0V3Zm8 2.2A3.6 3.6 0 1 0 8 12.4 3.6 3.6 0 0 0 8 5.2Zm0 1.6a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z"/></svg></button>
+          <span class="spacer"></span>
+          <button class="commit">Keep it</button>
+        </div>
+      </section>
+
+      <div class="lens">
+        <button aria-pressed="true">All</button>
+        <button aria-pressed="false">By type</button>
+      </div>
+
+      <div class="feed" id="pg-feed"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ── sample data ─────────────────────────────────────────────── */
+const SAMPLE = [
+  { throwback: true, body: "Hard Water Country Club", who: "john", when: "one year ago", type: "Hat" },
+  { body: "Wet Cement", who: "john", when: "today", type: "Band name", replies: 2 },
+  { body: "shirt that just says NOT THE DRUMMER", who: "biz", when: "yesterday", type: "T-shirt" },
+  { body: "The Municipal Airport Sound", who: "john", when: "2 days ago", type: "Band name",
+    muted: true, wave: true, replies: 1 },
+  { body: "hat with a tiny embroidered fire extinguisher", who: "biz", when: "14 days ago" },
+  { body: "Glass Ceiling Fan", who: "john", when: "3 weeks ago", type: "Band name", pending: true },
+  { body: "Nobody's Business", who: "biz", when: "Jul 30, 2026", type: "Band name" },
+];
+
+function seeded(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19);
+  }
+  let s = h >>> 0;
+  return () => { s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
+function renderFeed() {
+  const feed = document.getElementById("pg-feed");
+  feed.innerHTML = "";
+  const tilt = parseFloat(getComputedStyle(document.documentElement)
+                 .getPropertyValue("--tilt")) || 0;
+
+  for (const d of SAMPLE) {
+    if (d.throwback) {
+      const t = document.createElement("div");
+      t.className = "throwback";
+      t.innerHTML = `<div class="throwback__label">1 year ago today</div>
+                     <p class="card__body">${d.body}</p>`;
+      feed.appendChild(t);
+      continue;
+    }
+    const rnd = seeded(d.body);
+    const c = document.createElement("article");
+    c.className = "card" + (d.pending ? " card--pending" : "");
+    c.style.setProperty("--card-tilt", `${(rnd() * 2 - 1) * tilt}deg`);
+
+    let html = `<p class="card__body${d.muted ? " card__body--muted" : ""}">${d.body}</p>`;
+    if (d.wave) {
+      let bars = "";
+      for (let k = 0; k < 44; k++) bars += `<i style="height:${6 + Math.round(rnd() * 20)}px"></i>`;
+      html += `<div class="wave">${bars}<span class="wave__time">0:07</span></div>`;
+    }
+    html += `<div class="card__meta">
+        <span class="who">${d.who}</span>
+        <span class="when">${d.when}</span>
+        ${d.type ? `<span class="type">${d.type}</span>` : ""}
+        ${d.replies ? `<span class="replies">${d.replies} ${d.replies === 1 ? "reply" : "replies"}</span>` : ""}
+        ${d.pending ? `<span class="pendingmark">not synced</span>` : ""}
+      </div>`;
+    c.innerHTML = html;
+    feed.appendChild(c);
+  }
+}
+
+/* ── controls ────────────────────────────────────────────────── */
+const root = document.documentElement;
+const hexToRgb = h => {
+  const n = parseInt(h.slice(1), 16);
+  return [n >> 16 & 255, n >> 8 & 255, n & 255];
+};
+
+// id → [css variable, formatter, output formatter]
+const CONTROLS = {
+  "c-unit":         ["--space-unit",    v => v + "px",  v => v + "px"],
+  "c-density":      ["--density",       v => v,         v => Number(v).toFixed(2) + "×"],
+  "c-cardpad":      ["--card-pad",      v => v + "px",  v => v + "px"],
+  "c-gap":          ["--gap",           v => v + "px",  v => v + "px"],
+  "c-measure":      ["--measure",       v => v + "rem", v => v + "rem"],
+  "c-textbase":     ["--text-base",     v => v + "rem", v => Math.round(v * 16) + "px"],
+  "c-ratio":        ["--ratio",         v => v,         v => Number(v).toFixed(2)],
+  "c-titleweight":  ["--title-weight",  v => v,         v => v],
+  "c-titleleading": ["--title-leading", v => v,         v => Number(v).toFixed(2)],
+  "c-radius":       ["--radius-card",   v => v + "px",  v => v + "px"],
+  "c-blur":         ["--blur",          v => v + "px",  v => v + "px"],
+  "c-sat":          ["--saturate",      v => v + "%",   v => v + "%"],
+  "c-bg":           ["--bg",            v => v,         () => ""],
+  "c-f1":           ["--field-1",       v => v,         () => ""],
+  "c-f2":           ["--field-2",       v => v,         () => ""],
+  "c-ink":          ["--ink",           v => v,         () => ""],
+  "c-accent":       ["--accent",        v => v,         () => ""],
+};
+
+const touched = new Set();
+
+function applyOne(id) {
+  const [prop, fmt, out] = CONTROLS[id];
+  const inp = document.getElementById(id);
+  root.style.setProperty(prop, fmt(inp.value));
+  const o = inp.parentElement.querySelector("output");
+  if (o) o.textContent = out(inp.value);
+  touched.add(prop);
+}
+
+// Two controls don't map one-to-one onto a single variable.
+function applySurface() {
+  const a = document.getElementById("c-surface").value / 100;
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const base = dark ? "255,255,255" : "255,255,255";
+  const mul = dark ? 0.14 : 1;
+  root.style.setProperty("--surface",        `rgba(${base},${(a * mul).toFixed(3)})`);
+  root.style.setProperty("--surface-strong", `rgba(${base},${Math.min(1, a * mul * 1.3).toFixed(3)})`);
+  root.style.setProperty("--surface-sunk",   `rgba(${base},${(a * mul * 0.62).toFixed(3)})`);
+  document.querySelector("#c-surface").parentElement.querySelector("output")
+    .textContent = Math.round(a * 100) + "%";
+  touched.add("--surface");
+}
+
+function applyShadow() {
+  const s = document.getElementById("c-shadow").value / 100;
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const c = dark ? "0,0,0" : "16,18,24";
+  const k = dark ? 3.2 : 1;
+  root.style.setProperty("--shadow-card",
+    `0 1px 2px rgba(${c},${(0.05 * s * k).toFixed(3)}), 0 8px 24px rgba(${c},${(0.06 * s * k).toFixed(3)})`);
+  root.style.setProperty("--shadow-lift",
+    `0 2px 6px rgba(${c},${(0.07 * s * k).toFixed(3)}), 0 18px 48px rgba(${c},${(0.11 * s * k).toFixed(3)})`);
+  document.querySelector("#c-shadow").parentElement.querySelector("output")
+    .textContent = Math.round(s * 100) + "%";
+  touched.add("--shadow-card");
+}
+
+for (const id of Object.keys(CONTROLS)) {
+  document.getElementById(id).addEventListener("input", () => { applyOne(id); renderFeed(); });
+}
+document.getElementById("c-surface").addEventListener("input", applySurface);
+document.getElementById("c-shadow").addEventListener("input", applyShadow);
+
+/* segmented controls that set body attributes */
+for (const seg of document.querySelectorAll(".pg__seg[data-attr]")) {
+  const attr = seg.dataset.attr;
+  const sync = () => {
+    const cur = document.body.getAttribute(attr);
+    seg.querySelectorAll("button").forEach(b =>
+      b.setAttribute("aria-pressed", String(b.dataset.v === cur)));
+  };
+  seg.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    document.body.setAttribute(attr, b.dataset.v);
+    sync(); renderFeed();
+  });
+  sync();
+}
+
+/* theme switch — reload the link and re-seed every control from
+   whatever that theme actually declares */
+const themeSeg = document.getElementById("pg-theme");
+themeSeg.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  document.getElementById("theme-link").href = b.dataset.t;
+  themeSeg.querySelectorAll("button").forEach(x =>
+    x.setAttribute("aria-pressed", String(x === b)));
+  setTimeout(reset, 90);
+});
+themeSeg.querySelector("button").setAttribute("aria-pressed", "true");
+
+function reset() {
+  root.removeAttribute("style");
+  touched.clear();
+  // Render first — the measurements below need real elements on
+  // the page, and on first load the feed is empty.
+  renderFeed();
+  const cs = getComputedStyle(root);
+  const num = v => parseFloat(v) || 0;
+
+  // Tokens defined as var() chains (--card-pad: var(--space-5))
+  // come back as the literal text "var(--space-5)", which
+  // parseFloat reads as 0. Measure the rendered elements instead
+  // — that's the only place those have actually resolved.
+  const cardEl = document.querySelector("#pg-feed .card");
+  const feedEl = document.getElementById("pg-feed");
+  const px = (el, prop, fallback) =>
+    el ? num(getComputedStyle(el)[prop]) || fallback : fallback;
+
+  const seed = {
+    "c-unit":         num(cs.getPropertyValue("--space-unit")),
+    "c-density":      num(cs.getPropertyValue("--density")) || 1,
+    "c-cardpad":      px(cardEl, "paddingLeft", 24),
+    "c-gap":          px(feedEl, "rowGap", 12),
+    "c-measure":      num(cs.getPropertyValue("--measure")),
+    "c-textbase":     num(cs.getPropertyValue("--text-base")) || 1,
+    "c-ratio":        num(cs.getPropertyValue("--ratio")) || 1.25,
+    "c-titleweight":  num(cs.getPropertyValue("--title-weight")) || 520,
+    "c-titleleading": num(cs.getPropertyValue("--title-leading")) || 1.25,
+    "c-radius":       num(cs.getPropertyValue("--radius-card")),
+    "c-blur":         num(cs.getPropertyValue("--blur")),
+    "c-sat":          num(cs.getPropertyValue("--saturate")) || 100,
+  };
+  for (const [id, v] of Object.entries(seed)) {
+    const inp = document.getElementById(id);
+    if (!inp) continue;
+    inp.value = v;
+    const [, , out] = CONTROLS[id] || [];
+    const o = inp.parentElement.querySelector("output");
+    if (o && out) o.textContent = out(v);
+  }
+  document.getElementById("pg-out").style.display = "none";
+  renderFeed();
+}
+document.getElementById("pg-reset").addEventListener("click", reset);
+
+/* export — only what you actually changed */
+document.getElementById("pg-export").addEventListener("click", () => {
+  const inline = root.getAttribute("style") || "";
+  const decls = inline.split(";").map(s => s.trim()).filter(Boolean)
+    .map(s => "  " + s + ";").join("\n");
+  const body = `<body data-cards="${document.body.dataset.cards}" ` +
+               `data-meta="${document.body.dataset.meta}" ` +
+               `data-capture="${document.body.dataset.capture}">`;
+  const out = document.getElementById("pg-out");
+  out.textContent = decls
+    ? `/* paste into :root in ${document.getElementById("theme-link").getAttribute("href")} */\n:root {\n${decls}\n}\n\n/* and set this on <body> in index.html */\n${body}\n\n/* then bump SHELL_V in sw.js */`
+    : `/* nothing changed yet — move a slider */\n\n${body}`;
+  out.style.display = "block";
+  out.scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
+
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", reset);
+reset();
+</script>
+</body>
+</html>

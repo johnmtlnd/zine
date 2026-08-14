@@ -1,6 +1,7 @@
-# A shared archive
+# Offcuts
 
 Band names, t-shirt ideas, hats, whatever else. For two people.
+Lives at [offcuts.info](https://offcuts.info).
 
 **Start with [SETUP.md](SETUP.md).** Every step is a web page — no terminal.
 
@@ -13,13 +14,16 @@ index.html              the whole app shell
 app.js                  logic — capture, feed, sync, shuffle
 api.js                  Supabase over plain fetch
 db.js                   IndexedDB — the offline queue and cache
-theme.css               ← the only file you need to touch
-app.css                 structure and layout
+theme-glass.css         ← the active look. Tune this one.
+theme-zine.css          the photocopy alternate
+app.css                 components — aesthetic-neutral, leave it alone
 sw.js                   service worker — offline shell, push
 config.js               name, project URL, keys
 manifest.webmanifest    home screen install
+CNAME                   the custom domain
 db/schema.sql           paste into Supabase once
 functions/              two optional Edge Functions
+.github/workflows/      daily ping so the free database never pauses
 test/smoke.py           34 browser tests against a mocked backend
 ```
 
@@ -28,23 +32,86 @@ are the files that run.
 
 ---
 
-## Changing how it looks
+## The playground
 
-Everything visual is a variable in `theme.css`, and it's commented with
-what each one does and what the usable range is. Edit it in GitHub's web
-editor, commit, and the site rebuilds.
+Open `playground.html` in a browser. It renders the real components using
+the real stylesheets — nothing in it is a mockup — with live controls for
+every token and every structural variant.
 
-The ones worth playing with first:
+Drag things until it looks right, hit **Export CSS**, and it hands you a
+`:root` block to paste into the theme file plus the `<body>` line for
+`index.html`. It only exports what you actually changed.
 
-- `--accent` — one colour, used for one thing at a time
-- `--halftone` and `--grain` — the photocopy texture. Push them up until
-  it's too much, then back off
-- `--tilt` — how crooked the cards sit. `0deg` for a straight grid
-- `--font-display` — the condensed face in the masthead and labels
+It works offline with no Supabase project, so you can design against it
+before the app is even set up.
 
-One gotcha: after any change, the service worker will keep serving the
-old files until you bump `SHELL_V` in `sw.js`. That's the one piece of
-housekeeping this thing asks of you.
+---
+
+## Structure, separately from style
+
+Three things are switched with attributes on `<body>`, because they change
+what the thing *is* rather than what colour it is:
+
+```html
+<body data-cards="raised" data-meta="minimal" data-capture="card">
+```
+
+- **`data-cards`** — `raised` (fill + shadow) · `bordered` (adds an outline)
+  · `flat` (fill only) · `divided` (no container, hairline between entries)
+  · `naked` (nothing but content and space)
+- **`data-meta`** — `full` (name, date, type, replies) · `minimal` (name and
+  date) · `quiet` (date only)
+- **`data-capture`** — `card` (boxed) · `bare` (input sits on the page)
+
+`divided` and `naked` are where the whitespace is. They drop the container
+entirely and let the type carry the hierarchy.
+
+---
+
+## Two looks, one component layer
+
+There are two complete themes. **Liquid glass** is active: neutral grays,
+sans-serif, rounded, translucent surfaces with backdrop blur. **Xerox zine**
+is the original: warm paper, typewriter type, hard borders, halftone
+texture, cards tilted a fraction of a degree.
+
+Switching is one line in `index.html`:
+
+```html
+<link rel="stylesheet" href="theme-glass.css">   <!-- or theme-zine.css -->
+```
+
+They work because `app.css` reads only variables — it has no idea which
+aesthetic it's rendering. Both theme files define the same complete set of
+tokens, and there's a test that fails if either one drops one.
+
+**Everything derives from a scale.** Spacing comes from `--space-unit` and
+`--density`; type comes from `--text-base` and `--ratio`. There are no
+hand-picked pixel values in `app.css`. Change `--ratio` and the entire
+hierarchy re-proportions at once — that's the difference between a system
+and a pile of nudges.
+
+`--title-size` (the idea itself, at base × ratio²) is the most important
+number in the file. It's what stops a band name reading like a form label.
+
+**Tuning glass.** The ones worth touching first:
+
+- `--ratio` and `--density` — hierarchy and air, the two big levers
+- `--accent` — one colour, one job at a time
+- `--surface`, `--blur`, `--saturate` — how glassy the glass is
+- `--specular` — the bright top edge. It's the detail that separates real
+  glass from a frosted div. Deleting it costs more than you'd think
+- `--field-1` / `--field-2` — the soft blooms behind everything. Glass only
+  reads if there's something to refract; flatten these to `--bg` and every
+  blur in the app goes invisible
+- `--radius-card`, `--card-pad`, `--gap` — shape and breathing room
+
+**Tuning zine:** `--halftone` and `--grain` for texture, `--tilt` for how
+crooked the cards sit, `--photo-filter` for the dithering.
+
+One gotcha for either: after any change, the service worker keeps serving
+the old files until you bump `SHELL_V` in `sw.js` (`shell-v2` → `shell-v3`).
+That's the one piece of housekeeping this thing asks of you.
 
 ---
 
