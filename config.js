@@ -11,7 +11,7 @@ export const CONFIG = {
      .masthead__name rule.
 
      Placeholder for now, per your call. */
-  NAME: "MERCH TABLE",
+  NAME: "Off Cuts",
 
   /* From Supabase → Project Settings → API.
      The anon key is DESIGNED to be public — row-level security
