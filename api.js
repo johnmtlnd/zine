@@ -98,12 +98,20 @@ export async function sendMagicLink(email) {
     body: JSON.stringify({ email, create_user: true }),
   });
   if (!r.ok) {
-    // Keep what Supabase actually said. Collapsing every failure
-    // into one guess is how you end up debugging the wrong thing.
-    const d = await r.json().catch(() => ({}));
-    const err = new Error(d.msg || d.message || d.error_description || "Could not send the link");
+    // Keep what Supabase actually said. GoTrue returns at least four
+    // different error shapes depending on the failure, so read the raw
+    // body and fall back to it verbatim rather than inventing a message
+    // — an invented one sends you debugging the wrong thing.
+    const raw = await r.text().catch(() => "");
+    let d = {};
+    try { d = JSON.parse(raw); } catch {}
+    const detail = d.msg || d.message || d.error_description ||
+                   (typeof d.error === "string" ? d.error : "") ||
+                   d.error_code || raw.slice(0, 300) || "no detail returned";
+    const err = new Error(detail);
     err.status = r.status;
-    err.code = d.error_code || d.error || "";
+    err.code = d.error_code || (typeof d.error === "string" ? d.error : "") || "";
+    err.raw = raw;
     throw err;
   }
   return true;

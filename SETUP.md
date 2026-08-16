@@ -120,7 +120,9 @@ have to name yours up front.
 Left sidebar → **Authentication** → **URL Configuration**.
 
 - **Site URL** → `https://offcuts.info`
-- **Redirect URLs** → add `https://offcuts.info` there too
+- **Redirect URLs** → **Add URL** → `https://offcuts.info/**`
+  (the `/**` matters — it's a pattern, and without it only the bare
+  root matches)
 
 Save.
 
@@ -129,42 +131,103 @@ a miserable half hour of your life.
 
 ---
 
-## 7b · Custom SMTP — not optional, despite how it sounds
+## 7b · Send the emails through your own Gmail
 
-**Read this before you test sign-in.** Supabase's built-in mailer has two
+**Do this before you test sign-in.** Supabase's built-in mailer has two
 limits that together make a two-person app impossible:
 
-- **2 emails per hour**, across signup and sign-in combined. Two people
-  testing will burn that in about ninety seconds.
+- **2 emails per hour**, across signup and sign-in combined. You cannot
+  raise this on any plan — upgrading to Pro does not help. It's capped
+  unless you supply your own mail server.
 - **It only delivers to members of your Supabase organisation.** This is
-  the one that actually stops you. Biz isn't a member of your Supabase org,
-  so she will *never* receive a magic link on the default mailer. Not
-  slowly — never.
+  the one that actually stops you. Biz isn't a member of your org, so she
+  will *never* receive a magic link on the default mailer.
 
-You can't get around this by waiting. It needs a real email provider.
+The fix is to point Supabase at Gmail. You already have the account, it
+allows 500 emails a day, and it needs no DNS records and no new signups.
 
-1. Sign up at [resend.com](https://resend.com) — the free tier is 3,000
-   emails a month, which is roughly 2,999 more than you two need.
-2. Add and verify `offcuts.info` as a sending domain. Resend gives you
-   two or three DNS records to add at your registrar, same place you put
-   the A records.
-3. Create an API key.
-4. Supabase → **Authentication** → **Emails** → **SMTP Settings** →
-   enable custom SMTP:
-   - Host: `smtp.resend.com`
-   - Port: `465`
-   - Username: `resend`
-   - Password: your Resend API key
-   - Sender email: something at your domain, e.g. `hello@offcuts.info`
-5. Same page, **Rate Limits** — raise emails per hour from 2 to something
-   sane like 30.
+### Create an app password
 
-If you'd rather not set up a mail provider at all, the alternative is to
-drop magic links and use email plus password, with email confirmation
-turned off in **Authentication → Providers → Email**. For two people who
-already trust each other, that's a defensible trade and it removes the
-email dependency completely. It's a small change to `api.js` — ask and
-I'll make it.
+An "app password" is a single-purpose password Google issues so a program
+can send mail as you, without you handing over your real password. You can
+revoke it any time without touching your account.
+
+1. Go to [myaccount.google.com/security](https://myaccount.google.com/security)
+   and turn on **2-Step Verification** if it isn't already. Google won't
+   offer app passwords until it is.
+2. Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
+3. Give it a name — "Offcuts" — and hit **Create**.
+4. Google shows you 16 characters **once**. Copy them now. The spaces are
+   cosmetic; you can type it with or without them.
+
+### Point Supabase at it
+
+Supabase → **Project Settings** → **Authentication** → **SMTP Settings** →
+turn on **Enable Custom SMTP**:
+
+| Field | Value |
+|---|---|
+| Host | `smtp.gmail.com` |
+| Port | `587` |
+| Username | your full Gmail address |
+| Password | the 16-character app password |
+| Sender email | **the same Gmail address** |
+| Sender name | Off Cuts |
+
+**If you have a Google Workspace mailbox on your own domain, use that
+instead** — sign in as it, generate the app password on *that* account, and
+put it in both Username and Sender email. You get a proper From address,
+a 2,000/day limit instead of 500, and better deliverability, because the
+mail genuinely originates from that account rather than being forged.
+
+Do not authenticate as one Google account and set Sender email to a
+different address. Gmail only stamps a From address it knows you own — it
+will rewrite it back or refuse the message.
+
+**Use port 587, not 465.** Both are valid Gmail ports, but 465 fails on
+personal Gmail accounts with Supabase — it only reliably works on Google
+Workspace. 587 works on both. If you see an error sending, this is the
+first thing to check.
+
+**Sender email has to be your actual Gmail address.** Put anything else
+there — `hello@offcuts.info`, say — and Gmail will either rewrite it or
+refuse the message outright. It'll only send as an address it knows is
+yours.
+
+Then, same page, find **Rate Limits** and raise emails per hour from 2 to
+something sane like 30.
+
+### If it errors
+
+In order of likelihood:
+
+1. **Port is 465.** Change it to 587. This is the common one.
+2. **Sender email isn't your Gmail address.** Gmail refuses to send as an
+   address it doesn't own.
+3. **The app password has spaces in it.** They're cosmetic — paste it as
+   16 unbroken characters.
+4. **2-Step Verification isn't actually on**, so the app password was never
+   valid.
+
+Supabase will also show an amber "Check your SMTP provider" warning just for
+naming Gmail. That's advisory — it's noting Gmail isn't a transactional mail
+service, which is true and doesn't matter at four sign-ins. Save through it.
+
+### What to know afterwards
+
+- Sign-in emails arrive from your personal Gmail address. For two people
+  that reads as charming rather than broken.
+- **Changing your Google account password revokes every app password**,
+  including this one. If sign-in mysteriously breaks in a year, that's why —
+  generate a new one and paste it back in.
+- 500 emails a day. You'll use maybe four, ever.
+
+### If you outgrow it
+
+Gmail is the right call at this size but it's not built for bulk. If this
+ever became a real product, swap in a proper provider — Brevo is 300/day
+free, Resend is 3,000/month with your own domain. Same SMTP fields, so it's
+a five-minute change.
 
 ---
 

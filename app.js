@@ -119,8 +119,14 @@ function showAuth() {
         $("auth-msg").textContent =
           "Supabase won't email that address. Its built-in mailer only sends to " +
           "members of your Supabase organisation — custom SMTP fixes it for good.";
+      } else if (e.status >= 500) {
+        // GoTrue accepted the request and the mail server refused it.
+        // The useful detail is in Supabase's own auth log, not here.
+        $("auth-msg").textContent =
+          `Mail server rejected it (${e.status}). Supabase → Logs → Auth ` +
+          `has the actual SMTP error. ${e.message}`;
       } else {
-        $("auth-msg").textContent = `Couldn't send it — ${e.message}`;
+        $("auth-msg").textContent = `Couldn't send it — ${e.status}: ${e.message}`;
       }
       $("auth-send").disabled = false;
     }

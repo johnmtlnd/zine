@@ -1,4 +1,14 @@
 import asyncio, json, sys
+from datetime import datetime, timedelta
+
+# The "one year ago today" card only fires on an exact month/day match,
+# so this fixture has to be derived from the run date. Hardcoding it
+# makes the suite pass today and fail tomorrow.
+_t = datetime.now()
+try:    THROWBACK = _t.replace(year=_t.year - 1)
+except ValueError:  # 29 Feb
+        THROWBACK = _t.replace(year=_t.year - 1, day=28)
+THROWBACK_ISO = THROWBACK.strftime("%Y-%m-%dT20:20:00Z")
 from playwright.async_api import async_playwright
 
 BASE = "http://localhost:8899"
@@ -29,7 +39,7 @@ ENTRIES = [
      "author_name":"nora","type_label":None,"type_slug":None,"reply_count":0},
     {"id":"a5","author_id":USER["id"],"type_id":"t3","body":"Hard Water Country Club",
      "transcript":None,"audio_path":None,"audio_ms":None,"photo_path":None,"client_id":"c5",
-     "created_at":"2025-08-14T20:20:00Z","synced_at":"2025-08-14T20:20:00Z",
+     "created_at":THROWBACK_ISO,"synced_at":THROWBACK_ISO,
      "author_name":"john","type_label":"Hat","type_slug":"hat","reply_count":0},
 ]
 TYPES = [
