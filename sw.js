@@ -9,7 +9,7 @@
    browsers will happily serve the old one forever.
    ============================================================ */
 
-const SHELL_V = "shell-v10";
+const SHELL_V = "shell-v12";
 const SHELL = [
   "./",
   "./index.html",

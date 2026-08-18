@@ -119,6 +119,16 @@ function showAuth() {
         $("auth-msg").textContent =
           "Supabase won't email that address. Its built-in mailer only sends to " +
           "members of your Supabase organisation — custom SMTP fixes it for good.";
+      } else if (e.status === "timeout") {
+        $("auth-msg").textContent = e.message;
+      } else if (e.status === undefined) {
+        // fetch() itself rejected — no HTTP response came back at all,
+        // so this isn't Supabase saying no, it's the request never
+        // leaving. Different problem, different fixes.
+        $("auth-msg").textContent =
+          "Couldn't reach Supabase at all — the request never completed. " +
+          "Usually that's no connection, a content or ad blocker, or the " +
+          "page being opened as a local file instead of over https.";
       } else if (e.status >= 500) {
         // GoTrue accepted the request and the mail server refused it.
         // The useful detail is in Supabase's own auth log, not here.

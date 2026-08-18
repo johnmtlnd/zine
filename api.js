@@ -92,11 +92,34 @@ export async function sendMagicLink(email) {
   // body field. Putting it in the body silently does nothing and
   // you end up wherever Site URL points instead.
   const back = encodeURIComponent(location.origin + location.pathname);
-  const r = await fetch(`${URL_}/auth/v1/otp?redirect_to=${back}`, {
-    method: "POST",
-    headers: { apikey: KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ email, create_user: true }),
-  });
+
+  // Cap the wait. A misconfigured SMTP port doesn't refuse the
+  // connection, it hangs — so without a timeout this request sits
+  // there and eventually surfaces as an indistinguishable network
+  // error. Timing out on purpose lets us say which one it was.
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 20000);
+  let r;
+  try {
+    r = await fetch(`${URL_}/auth/v1/otp?redirect_to=${back}`, {
+      method: "POST",
+      headers: { apikey: KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, create_user: true }),
+      signal: ctl.signal,
+    });
+  } catch (e) {
+    const err = new Error(
+      e.name === "AbortError"
+        ? "Timed out after 20s. Supabase took the request but never replied — " +
+          "that's almost always the mail server: check the SMTP port and host."
+        : "Couldn't reach Supabase at all — no connection, or something is " +
+          "blocking the request."
+    );
+    err.status = e.name === "AbortError" ? "timeout" : undefined;
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
   if (!r.ok) {
     // Keep what Supabase actually said. GoTrue returns at least four
     // different error shapes depending on the failure, so read the raw
