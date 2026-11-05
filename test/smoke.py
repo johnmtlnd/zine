@@ -115,7 +115,12 @@ async def main():
         cards = await pg.locator(".card").count()
         check("cards rendered", cards == 5, f"got {cards}")
         check("type chips rendered", await pg.locator("#typebar .chip").count() == 4)
-        check("throwback shown (1yr ago today)", await pg.locator(".throwback").count() == 1)
+        ncat = await pg.locator(".cat:not(.cat--all)").count()
+        check("categories listed", ncat >= 3, f"{ncat}")
+        check("category counts add up", await pg.evaluate(
+            "[...document.querySelectorAll('.cat:not(.cat--all) .cat__n')].reduce((a,e)=>a+ +e.textContent,0)") == 5)
+        check("posts sheet starts as a peek bar", await pg.evaluate("document.getElementById('posts').dataset.state") == "closed")
+        check("peek bar says All posts", (await pg.inner_text("#posts-peek")).strip() == "All posts")
         check("transcript fallback italic", await pg.locator(".card__body--muted").count() >= 1)
         check("waveform for audio entry", await pg.locator(".wave").count() == 1)
         # Compare against the config value, not a literal — the name is
@@ -126,19 +131,6 @@ async def main():
         check("masthead name from config", norm(rendered) == norm(cfgname),
               f"rendered {rendered!r} vs config {cfgname!r}")
         await pg.screenshot(path="/tmp/feed.png", full_page=False)
-
-        # tilt is seeded => stable across reloads
-        t1 = await pg.locator(".card").first.evaluate("e=>getComputedStyle(e).transform")
-        await pg.reload(); await pg.wait_for_timeout(1500)
-        t2 = await pg.locator(".card").first.evaluate("e=>getComputedStyle(e).transform")
-        check("card tilt is stable across reloads", t1 == t2, f"{t1} vs {t2}")
-        # Tilt is theme-dependent — the zine theme sets it, glass zeroes it.
-        # Assert against whatever the active theme actually declares.
-        tilt_token = await pg.evaluate(
-            "parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tilt'))")
-        flat = t1 in ("none", "matrix(1, 0, 0, 1, 0, 0)")
-        check("tilt matches the active theme",
-              (tilt_token == 0) == flat, f"--tilt:{tilt_token} transform:{t1}")
 
         # Every token the component layer reads must exist, or the
         # themes aren't actually interchangeable.
@@ -158,19 +150,50 @@ async def main():
         }""")
         check("theme defines every token app.css reads", not missing, str(missing))
 
-        # BY TYPE lens
-        await pg.click("#lens-type"); await pg.wait_for_timeout(400)
-        check("type groups appear", await pg.locator(".sectionrule").count() >= 3)
-        await pg.screenshot(path="/tmp/bytype.png")
-        await pg.click("#lens-all"); await pg.wait_for_timeout(300)
+        # the sheet
+        await pg.click("#posts-peek"); await pg.wait_for_timeout(600)
+        check("peek opens the sheet", await pg.evaluate("document.getElementById('posts').dataset.state") == "open")
+        check("sheet unfiltered from the peek", not await pg.is_visible("#posts-title"))
+        await pg.screenshot(path="/tmp/sheet.png")
+        await pg.mouse.click(200, 40); await pg.wait_for_timeout(600)
+        check("tapping above the sheet closes it", await pg.evaluate("document.getElementById('posts').dataset.state") == "closed")
+
+        # category -> filtered sheet
+        await pg.click(".cat:not(.cat--all) >> nth=0"); await pg.wait_for_timeout(600)
+        n1 = await pg.locator("#feed .card").count()
+        check("category opens the sheet, filtered", await pg.is_visible("#posts-title") and 0 < n1 < 5, f"{n1}")
+        await pg.click("#posts-clear"); await pg.wait_for_timeout(200)
+        check("clearing the category shows everything", await pg.locator("#feed .card").count() == 5)
+        await pg.click("#m-audio"); await pg.wait_for_timeout(200)
+        check("audio filter", await pg.locator("#feed .card").count() == 1)
+        await pg.click("#m-all")
+        await pg.select_option("#sort", "old"); await pg.wait_for_timeout(200)
+        firstold = await pg.inner_text("#feed .card >> nth=0 >> .post__head")
+        await pg.select_option("#sort", "new"); await pg.wait_for_timeout(200)
+        firstnew = await pg.inner_text("#feed .card >> nth=0 >> .post__head")
+        check("sort flips the order", firstold != firstnew, f"{firstold!r} / {firstnew!r}")
+        await pg.keyboard.press("Escape"); await pg.wait_for_timeout(600)
+        check("Escape closes the sheet", await pg.evaluate("document.getElementById('posts').dataset.state") == "closed")
 
         # capture path
+        await pg.click("#btn-compose"); await pg.wait_for_timeout(400)
+        check("+ opens the composer", await pg.evaluate("document.getElementById('compose').open"))
+        check("composer focused on open", await pg.evaluate("document.activeElement.id") == "composer")
+        await pg.keyboard.press("Escape"); await pg.wait_for_timeout(500)
+        check("Escape closes the modal", not await pg.evaluate("document.getElementById('compose').open"))
+        await pg.click("#btn-compose"); await pg.wait_for_timeout(400)
+        await pg.fill("#composer", "Half a thought"); await pg.click("#btn-cancel"); await pg.wait_for_timeout(500)
+        check("a parked draft marks the +", await pg.evaluate("document.getElementById('btn-compose').classList.contains('has-draft')"))
+        await pg.click("#btn-compose"); await pg.wait_for_timeout(400)
+        check("the draft is still there", (await pg.input_value("#composer")) == "Half a thought")
         await pg.fill("#composer", "Glass Ceiling Fan")
         check("commit enabled once there's text", await pg.is_enabled("#btn-commit"))
         await pg.click("#typebar .chip >> nth=0")
         await pg.click("#btn-commit")
         await pg.wait_for_timeout(1200)
         check("composer cleared after commit", (await pg.input_value("#composer")) == "")
+        await pg.wait_for_timeout(500)
+        check("modal closes after commit", not await pg.evaluate("document.getElementById('compose').open"))
         check("entry POSTed to server", len(created) >= 1, f"{len(created)} posts")
         check("client_id sent", created and "client_id" in created[0])
         check("capture time sent, not server time", created and "created_at" in created[0])
@@ -178,6 +201,7 @@ async def main():
         # offline capture
         await ctx.set_offline(True)
         await pg.evaluate("window.dispatchEvent(new Event('offline'))")
+        await pg.click("#btn-compose"); await pg.wait_for_timeout(400)
         await pg.fill("#composer", "Municipal Waste Authority")
         await pg.click("#btn-commit")
         await pg.wait_for_timeout(900)
@@ -200,19 +224,20 @@ async def main():
         check("offline banner cleared", not await pg.is_visible("#offline-banner"))
         check("queue flushed on reconnect", len(created) >= 2, f"{len(created)} posts")
 
-        # shuffle
-        await pg.click("#btn-shuffle"); await pg.wait_for_timeout(600)
-        check("shuffle opens detail", await pg.is_visible("#detail"))
-        check("shuffle offers Again", await pg.is_visible("#detail-again"))
-        await pg.screenshot(path="/tmp/shuffle.png")
-        await pg.click("#detail-close"); await pg.wait_for_timeout(300)
-
         # detail + thread
+        await pg.click("#posts-peek"); await pg.wait_for_timeout(600)
+        before = await pg.locator("#feed .card").count()
+        await pg.select_option("#sort", "shuffle"); await pg.wait_for_timeout(200)
+        after = await pg.locator("#feed .card").count()
+        check("shuffle keeps every post", before == after and before >= 5, f"{before} -> {after}")
+        await pg.select_option("#sort", "new")
         await pg.click(".card >> nth=0"); await pg.wait_for_timeout(800)
         check("card opens detail", await pg.is_visible("#detail"))
         check("reply box present", await pg.locator(".replybox input").count() == 1)
         await pg.screenshot(path="/tmp/detail.png")
         await pg.click("#detail-close")
+        await pg.wait_for_timeout(200)
+        await pg.keyboard.press("Escape"); await pg.wait_for_timeout(600)
 
         # settings
         await pg.click("#btn-settings"); await pg.wait_for_timeout(400)
