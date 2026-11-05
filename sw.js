@@ -9,7 +9,7 @@
    browsers will happily serve the old one forever.
    ============================================================ */
 
-const SHELL_V = "shell-v15";
+const SHELL_V = "shell-v16";
 const SHELL = [
   "./",
   "./index.html",
@@ -28,6 +28,7 @@ const SHELL = [
   "./theme-zine.css",
   "./app.js",
   "./api.js",
+  "./md.js",
   "./db.js",
   "./config.js",
   "./manifest.webmanifest",

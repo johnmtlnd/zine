@@ -53,6 +53,7 @@ REPLIES = [{"id":"r1","entry_id":"a1","author_id":"2","body":"or Wet Concrete",
             "profiles":{"display_name":"nora"}}]
 
 created = []
+LIKES = set()   # entry ids John has liked — the mock remembers, like the real db
 
 async def handle(route):
     url = route.request.url
@@ -63,7 +64,16 @@ async def handle(route):
                              body=json.dumps(body))
     if "/auth/v1/user" in url: return await ok(USER)
     if "/auth/v1/otp"  in url: return await ok({})
-    if "entries_full"  in url: return await ok(ENTRIES)
+    if "entries_full"  in url:
+        return await ok([{**e, "liked_by": ["john"] if e["id"] in LIKES else [],
+                          "liked_by_me": e["id"] in LIKES} for e in ENTRIES])
+    if "/rest/v1/likes" in url:
+        eid = (json.loads(route.request.post_data or "{}").get("entry_id")
+               or (url.split("entry_id=eq.")[1].split("&")[0] if "entry_id=eq." in url else None))
+        if m == "POST": LIKES.add(eid)
+        if m == "DELETE": LIKES.discard(eid)
+        return await ok([])
+    if "/rest/v1/rpc/" in url: return await ok(None)
     if "entry_types"   in url:
         if m == "POST":
             row = json.loads(route.request.post_data)
@@ -80,6 +90,11 @@ async def handle(route):
             row = json.loads(route.request.post_data)
             row["id"] = "new-" + str(len(created)); created.append(row)
             return await ok([row], 201)
+        if m == "PATCH" and "id=eq." in url:
+            eid = url.split("id=eq.")[1].split("&")[0]
+            for e in ENTRIES:
+                if e["id"] == eid: e.update(json.loads(route.request.post_data))
+            return await ok([])
         if m in ("PATCH","DELETE"): return await ok([])
     if "/functions/v1/" in url: return await ok({})
     return await ok({})
@@ -87,6 +102,7 @@ async def handle(route):
 async def main():
     results = []
     posted_urls = []
+    calls = []     # (method, url, body) — every write, to check the app said what it should
     def check(name, cond, detail=""):
         results.append((name, bool(cond), detail))
     async with async_playwright() as p:
@@ -95,6 +111,8 @@ async def main():
         async def spy1(route):
             if route.request.method == "POST":
                 posted_urls.append(route.request.url)
+            if route.request.method != "GET":
+                calls.append((route.request.method, route.request.url, route.request.post_data or ""))
             await handle(route)
         await ctx.route("https://YOUR-PROJECT.supabase.co/**", spy1)
         pg = await ctx.new_page()
@@ -114,7 +132,8 @@ async def main():
         check("auth hidden", not await pg.is_visible("#auth"))
         cards = await pg.locator(".card").count()
         check("cards rendered", cards == 5, f"got {cards}")
-        check("type chips rendered", await pg.locator("#typebar .chip").count() == 4)
+        check("type chips rendered", await pg.locator("#typebar .chip:not(.chip--new)").count() == 4)
+        check("composer offers a new tag", await pg.locator("#typebar .chip--new").count() == 1)
         ncat = await pg.locator(".cat:not(.cat--all)").count()
         check("categories listed", ncat >= 3, f"{ncat}")
         check("category counts add up", await pg.evaluate(
@@ -243,11 +262,77 @@ async def main():
         await pg.click("#btn-settings"); await pg.wait_for_timeout(400)
         check("settings opens", await pg.is_visible("#settings"))
         rows = await pg.locator("#settings .row").count()
-        check("settings stays at four rows", rows == 4, f"{rows}")
+        check("settings has three rows", rows == 3, f"{rows}")
+        check("tag manager lists every tag", await pg.locator("#tagman .tagrow").count() == 4)
         await pg.screenshot(path="/tmp/settings.png")
 
+        # merge a tag
+        n0 = len(calls)
+        await pg.click("#tagman .tagrow >> nth=2 >> .tagrow__btn >> text=Merge")
+        await pg.click("#tagman .tagrow__btn--go"); await pg.wait_for_timeout(500)
+        merged = [c for c in calls[n0:] if "rpc/merge_tags" in c[1]]
+        check("merge calls merge_tags with source and target", merged and '"p_sources"' in merged[0][2] and '"p_target"' in merged[0][2], str(calls[n0:]))
+        # delete needs two taps
+        n0 = len(calls)
+        await pg.click("#tagman .tagrow >> nth=3 >> .tagrow__btn--del"); await pg.wait_for_timeout(200)
+        check("tag delete asks first", not [c for c in calls[n0:] if c[0] == "DELETE"])
+        await pg.click("#tagman .tagrow >> nth=3 >> .tagrow__btn--del"); await pg.wait_for_timeout(500)
+        check("second tap deletes the tag", [c for c in calls[n0:] if c[0] == "DELETE" and "entry_types" in c[1]])
+        await pg.click("#set-close"); await pg.wait_for_timeout(300)
+
+        # ---- new post with two tags + markdown preview ----
+        await pg.click("#btn-compose"); await pg.wait_for_timeout(400)
+        await pg.click("#btn-clear") if await pg.is_visible("#btn-clear") else None
+        await pg.fill("#composer", "Two tags\n**bold** and a [link](https://example.com)")
+        await pg.click("#btn-preview"); await pg.wait_for_timeout(200)
+        check("preview renders markdown", await pg.locator("#compose-preview strong").count() == 1
+              and await pg.locator("#compose-preview a[href='https://example.com']").count() == 1)
+        await pg.click("#btn-preview")
+        await pg.click("#typebar .chip >> nth=0"); await pg.click("#typebar .chip >> nth=1")
+        n0 = len(calls)
+        await pg.keyboard.press("Control+Enter"); await pg.wait_for_timeout(1500)
+        tagged = [c for c in calls[n0:] if "rpc/set_entry_tags" in c[1]]
+        check("Ctrl+Return keeps it", not await pg.evaluate("document.getElementById('compose').open"))
+        check("both tags saved", tagged and len(json.loads(tagged[0][2])["p_tags"]) == 2, str(calls[n0:]))
+
+        # ---- tag a post from the feed, like it, edit it ----
+        await pg.click("#posts-peek"); await pg.wait_for_timeout(600)
+        await pg.click("#m-all")
+        untagged = pg.locator("#feed .card", has=pg.locator(".tag--add", has_text="+ Tag")).first
+        check("untagged posts offer + Tag", await untagged.count() == 1)
+        n0 = len(calls)
+        await untagged.locator(".tag--add").click(); await pg.wait_for_timeout(200)
+        check("tag picker opens", await pg.is_visible(".picker"))
+        await pg.click(".picker__opt >> nth=0"); await pg.wait_for_timeout(1200)
+        check("picking a tag saves it", [c for c in calls[n0:] if "rpc/set_entry_tags" in c[1]], str(calls[n0:]))
+        await pg.keyboard.press("Escape"); await pg.wait_for_timeout(200)
+        check("Escape closes the picker", not await pg.is_visible(".picker"))
+
+        first = pg.locator("#feed .card:not(.card--pending)").first
+        n0 = len(calls)
+        await first.locator(".like").click(); await pg.wait_for_timeout(900)
+        check("like shows at once", await pg.locator("#feed .card:not(.card--pending) >> nth=0 >> .like").get_attribute("aria-pressed") == "true")
+        check("like is sent", [c for c in calls[n0:] if c[0] == "POST" and "/rest/v1/likes" in c[1]], str(calls[n0:]))
+
+        await pg.locator("#feed .card:not(.card--pending)").first.click(); await pg.wait_for_timeout(700)
+        await pg.click("#detail-edit"); await pg.wait_for_timeout(200)
+        check("edit opens the editor", await pg.is_visible("#detail .editor"))
+        await pg.fill("#detail .editor", "Edited title\nNow with **weight**\n\n- one\n- two")
+        n0 = len(calls)
+        await pg.click("#detail-save"); await pg.wait_for_timeout(1200)
+        patch = [c for c in calls[n0:] if c[0] == "PATCH" and "/rest/v1/entries" in c[1]]
+        check("edit is saved", patch and "Edited title" in patch[0][2] and "edited_at" in patch[0][2], str(calls[n0:]))
+        check("edited post renders markdown", await pg.locator("#detail .post__md strong").count() == 1
+              and await pg.locator("#detail .post__md li").count() == 2)
+        check("edited mark shows", await pg.locator("#detail .post__meta .edited").count() == 1)
+        n0 = len(calls)
+        await pg.click("#detail-delete"); await pg.wait_for_timeout(200)
+        check("post delete asks first", (await pg.inner_text("#detail-delete")).lower().startswith("tap again")
+              and not [c for c in calls[n0:] if c[0] == "DELETE"])
+        await pg.click("#detail-close"); await pg.wait_for_timeout(200)
+        await pg.keyboard.press("Escape"); await pg.wait_for_timeout(600)
+
         # dark mode
-        await pg.click("#set-close")
         await pg.emulate_media(color_scheme="dark")
         await pg.wait_for_timeout(400)
         await pg.screenshot(path="/tmp/dark.png")
@@ -288,6 +373,32 @@ async def main():
         check("confirmation shown", "Check your email" in (await pg2.inner_text("#auth-msg")))
 
         await pg2.close()
+
+        # ---- desktop: centred feed, grid, post as a modal ----
+        ctx3 = await b.new_context(viewport={"width":1360,"height":900})
+        await ctx3.route("https://YOUR-PROJECT.supabase.co/**", handle)
+        pg3 = await ctx3.new_page()
+        await pg3.add_init_script("localStorage.setItem('archive.session', JSON.stringify({access_token:'fake',refresh_token:'fake',expires_at:Date.now()+86400000,user:null}));")
+        await pg3.goto(f"{BASE}/index.html"); await pg3.wait_for_timeout(1500)
+        box = await pg3.locator("#feed .card >> nth=0").bounding_box()
+        pane = await pg3.locator("#posts").bounding_box()
+        left, right = box["x"] - pane["x"], (pane["x"] + pane["width"]) - (box["x"] + box["width"])
+        check("desktop feed is centred in its pane", abs(left - right) < 4 and box["width"] <= 681, f"{left:.0f}/{right:.0f} w={box['width']:.0f}")
+        check("feed/grid toggle shows on desktop", await pg3.is_visible("#v-grid"))
+        await pg3.click("#v-grid"); await pg3.wait_for_timeout(300)
+        boxes = [await pg3.locator(f"#feed .card >> nth={k}").bounding_box() for k in range(3)]
+        check("grid puts cards side by side", abs(boxes[0]["y"] - boxes[1]["y"]) < 2 and boxes[1]["x"] > boxes[0]["x"])
+        await pg3.screenshot(path="/tmp/grid.png")
+        await pg3.reload(); await pg3.wait_for_timeout(1300)
+        check("grid choice is remembered", "feed--grid" in (await pg3.get_attribute("#feed", "class")))
+        await pg3.click("#feed .card >> nth=0"); await pg3.wait_for_timeout(700)
+        panel = await pg3.locator(".detail__panel").bounding_box()
+        check("post opens as a centred modal", panel["width"] <= 760 and abs((panel["x"] + panel["width"]/2) - 680) < 4)
+        check("modal has replies and edit", await pg3.is_visible(".replybox input") and await pg3.is_visible("#detail-edit"))
+        await pg3.mouse.click(40, 450); await pg3.wait_for_timeout(300)
+        check("clicking outside closes the modal", not await pg3.is_visible("#detail"))
+        radius = await pg3.evaluate("(() => { const i = document.querySelector('.post .photo'); return i ? getComputedStyle(i).borderTopLeftRadius : 'no photo'; })()")
+        await ctx3.close()
         await b.close()
 
     # Upsert must name the conflict target, or a retried capture

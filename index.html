@@ -101,6 +101,14 @@
               <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16v-3.5a7.5 7.5 0 0 1 15 0V16"/><rect x="3.5" y="14" width="4" height="5.5" rx="1.6"/><rect x="16.5" y="14" width="4" height="5.5" rx="1.6"/></svg>
             </button>
           </div>
+          <div class="viewtoggle" role="group" aria-label="Layout">
+            <button class="viewtoggle__btn" id="v-feed" type="button" aria-pressed="true" aria-label="Feed" title="Feed">
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 6h14M5 12h14M5 18h9"/></svg>
+            </button>
+            <button class="viewtoggle__btn" id="v-grid" type="button" aria-pressed="false" aria-label="Grid" title="Grid">
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/></svg>
+            </button>
+          </div>
           <label class="sort">
             <span id="sort-label">Sort by</span>
             <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 9 7 7 7-7"/></svg>
@@ -133,6 +141,7 @@
       <textarea class="composer" id="composer" rows="3"
                 placeholder="What&rsquo;s the idea?"
                 autocomplete="off" autocapitalize="sentences"></textarea>
+      <div class="mdpreview post" id="compose-preview" hidden></div>
       <div class="sheet__row" id="attached" hidden></div>
       <div class="sheet__row" id="typebar"><!-- type chips injected --></div>
     </div>
@@ -145,8 +154,13 @@
     <button class="sheet__tool sheet__tool--rec" id="btn-rec" type="button" title="Hold to record" aria-label="Hold to record">
       <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="8.5" y="2.5" width="7" height="12" rx="3.5"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></svg>
     </button>
+    <button class="sheet__tool sheet__tool--text" id="btn-preview" type="button" aria-pressed="false" title="Preview the formatting">Aa</button>
+    <button class="sheet__tool" id="btn-expand" type="button" aria-pressed="false" title="Full screen" aria-label="Full screen">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
     <span class="rectimer" id="rectimer"></span>
     <span class="spacer"></span>
+    <span class="sheet__hint" id="compose-hint">Markdown &middot; &#8984;&#8617; keeps it</span>
     <button class="sheet__cancel" id="btn-cancel" type="button">Cancel</button>
     <button class="commit" id="btn-commit" type="button" disabled>Keep it</button>
   </div>
@@ -156,13 +170,18 @@
      One component doing two jobs: tapping a card and hitting
      shuffle both land here. Full bleed, one idea, the thread. -->
 <section class="shuffle" id="detail" hidden>
-  <div class="shuffle__label" id="detail-label"></div>
-  <div class="shuffle__body" id="detail-body"></div>
-  <div class="shuffle__foot">
-    <button class="chip" id="detail-close">‹ Back</button>
-    <button class="chip" id="detail-again" hidden>Again</button>
-    <span class="spacer"></span>
-    <button class="chip chip--ghost" id="detail-delete">Delete</button>
+  <div class="detail__panel" role="dialog" aria-modal="true" aria-label="Post">
+    <div class="shuffle__label" id="detail-label"></div>
+    <div class="shuffle__body" id="detail-body"></div>
+    <div class="shuffle__foot">
+      <button class="chip" id="detail-close">&lsaquo; Back</button>
+      <button class="chip" id="detail-again" hidden>Again</button>
+      <span class="spacer"></span>
+      <button class="chip" id="detail-edit">Edit</button>
+      <button class="chip chip--ghost" id="detail-delete">Delete</button>
+      <button class="chip" id="detail-cancel" hidden>Cancel</button>
+      <button class="chip chip--solid" id="detail-save" hidden>Save</button>
+    </div>
   </div>
 </section>
 
@@ -180,15 +199,17 @@
       <button class="chip" id="set-push">Turn on</button>
     </div>
     <div class="row">
-      <span class="row__label">Add a type</span>
-      <input class="field" id="set-type" placeholder="Tote bag" style="width:auto;margin:0;max-width:55%">
-    </div>
-    <div class="row">
       <span class="row__label">Sign out</span>
       <button class="chip" id="set-signout">Sign out</button>
     </div>
     </div>
-    <p style="margin-top:24px;color:var(--ink-soft);font-size:.85rem" id="set-status"></p>
+    <h2 class="settings__h">Tags</h2>
+    <p class="settings__sub">Rename by tapping a name. Merging moves every post across; deleting only removes the tag, never the posts.</p>
+    <div class="group" id="tagman"><!-- rows injected --></div>
+    <div class="group tagnew">
+      <input class="field" id="set-type" placeholder="New tag" autocomplete="off" aria-label="New tag name">
+    </div>
+    <p style="margin-top:24px;color:var(--ink-soft);font-size:.85rem" id="set-status" role="status"></p>
     <button class="chip" id="set-close">Done</button>
   </div>
 </section>

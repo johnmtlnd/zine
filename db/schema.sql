@@ -75,8 +75,7 @@ alter table entry_types enable row level security;
 
 insert into entry_types (label, slug, sort_order, is_seed) values
   ('Band name', 'band-name', 10, true),
-  ('T-shirt',   't-shirt',   20, true),
-  ('Hat',       'hat',       30, true),
+  ('Merch',     'merch',     20, true),   -- hats, tees, totes (since 002)
   ('Other',     'other',     40, true)
 on conflict (slug) do nothing;
 
@@ -182,6 +181,7 @@ left join entry_types t on t.id = e.type_id;
 
 -- ============================================================
 --  DONE.
+--  Then run 002_tags_likes.sql (tags, likes, edits).
 --  Next: Table editor → allowed_emails → add two rows,
 --  one for each of your email addresses. Nothing works
 --  until those exist.

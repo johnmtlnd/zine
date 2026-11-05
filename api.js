@@ -193,6 +193,31 @@ export const api = {
       prefer: "return=representation",
     }),
 
+  renameType: (id, label) =>
+    rest(`entry_types?id=eq.${id}`, { method: "PATCH", body: { label }, prefer: "return=representation" }),
+
+  // posts lose the tag, nothing else (entry_tags cascades)
+  deleteType: (id) => rest(`entry_types?id=eq.${id}`, { method: "DELETE" }),
+
+  /* ---- since migration 002 ---- */
+
+  // Is 002 in? One cheap read; a missing table is a 404.
+  hasV2: () => rest("likes?select=entry_id&limit=1").then(() => true, (e) => (e.status === 404 ? false : null)),
+
+  setEntryTags: (entryId, tagIds) =>
+    rest("rpc/set_entry_tags", { method: "POST", body: { p_entry: entryId, p_tags: tagIds } }),
+
+  mergeTags: (sourceIds, targetId) =>
+    rest("rpc/merge_tags", { method: "POST", body: { p_sources: sourceIds, p_target: targetId } }),
+
+  like: (entryId) =>
+    rest("likes?on_conflict=entry_id,user_id", {
+      method: "POST", body: { entry_id: entryId }, prefer: "resolution=ignore-duplicates",
+    }),
+
+  unlike: (entryId, userId) =>
+    rest(`likes?entry_id=eq.${entryId}&user_id=eq.${userId}`, { method: "DELETE" }),
+
   replies: (entryId) =>
     rest(`replies?select=*,profiles(display_name)&entry_id=eq.${entryId}&order=created_at.asc`),
 
