@@ -43,13 +43,29 @@ const fmtTime = (ms) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
 
-function when(iso) {
+
+/* The prototype's small print: "1 DAY AGO". Past a month it turns
+   into a date — at that distance "37 days ago" is just arithmetic. */
+function ago(iso) {
   const d = new Date(iso);
-  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
-  if (days === 0) return "today";
-  if (days === 1) return "yesterday";
-  if (days < 30) return `${days} days ago`;
+  const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+  const n = (v, unit) => `${v} ${unit}${v === 1 ? "" : "s"} ago`;
+  if (mins < 1) return "just now";
+  if (mins < 60) return n(mins, "min");
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return n(hrs, "hr");
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return n(days, "day");
+  if (days < 30) return n(Math.floor(days / 7), "week");
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+/* First line is the heading, the rest is the body. No schema
+   change: it's how you'd write it in a notebook anyway. */
+function split(text) {
+  const t = (text || "").trim();
+  const i = t.indexOf("\n");
+  return i < 0 ? [t, ""] : [t.slice(0, i).trim(), t.slice(i + 1).trim()];
 }
 
 /* ---- state --------------------------------------------------- */
@@ -59,7 +75,10 @@ const S = {
   types: [],
   entries: [],     // from server cache
   pending: [],     // from local queue
-  lens: "all",
+  cat: null,       // a type id, "none" for untyped, or null for everything
+  media: "all",    // all | photo | audio
+  sort: "new",     // new | old | shuffle
+  shuffleSeed: 0,
   draft: { typeId: null, audio: null, audioMs: 0, photo: null },
   openId: null,
 };
@@ -88,6 +107,7 @@ async function boot() {
   render();
 
   wire();
+  updateCommit();
   await Promise.all([loadTypes(), loadProfile()]);
   await refreshFromServer();
   syncQueue();
@@ -157,6 +177,7 @@ async function loadTypes() {
     S.types = (await meta.get("types", [])) || [];
   }
   renderTypebar();
+  render();
 }
 
 async function loadProfile() {
@@ -190,16 +211,17 @@ async function refreshFromServer() {
 function wire() {
   const composer = $("composer");
 
-  composer.addEventListener("input", () => {
-    composer.style.height = "auto";
-    composer.style.height = Math.min(composer.scrollHeight, 260) + "px";
-    updateCommit();
-  });
+  composer.addEventListener("input", () => { growComposer(); updateCommit(); });
 
   // Enter commits, Shift+Enter is a newline. On a phone the
   // return key is right there — this is the whole three-second path.
   composer.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commit(); }
+    if (e.key !== "Enter") return;
+    // With a keyboard: Return keeps it, Shift+Return is the next line.
+    // On a phone Return has to be a newline — there's no Shift to
+    // reach for, and the second line is where the body goes.
+    const touch = matchMedia("(pointer: coarse)").matches;
+    if (e.metaKey || e.ctrlKey || (!touch && !e.shiftKey)) { e.preventDefault(); commit(); }
   });
 
   $("btn-commit").onclick = commit;
@@ -219,10 +241,11 @@ function wire() {
     if (f) { S.draft.photo = f; renderAttached(); updateCommit(); }
   };
 
-  $("lens-all").onclick  = () => setLens("all");
-  $("lens-type").onclick = () => setLens("type");
+  // + in the masthead
+  $("btn-compose").onclick = () => openComposer();
+  wireComposer();
+  wirePosts();
 
-  $("btn-shuffle").onclick  = shuffle;
   $("btn-settings").onclick = () => { $("settings").hidden = false; };
   $("set-close").onclick    = () => { $("settings").hidden = true; };
   $("detail-close").onclick = () => { $("detail").hidden = true; S.openId = null; };
@@ -251,7 +274,6 @@ function wire() {
     if (!document.hidden) { syncQueue(); refreshFromServer(); }
   });
 
-  composer.focus();
 }
 
 const status = (t) => { $("set-status").textContent = t; };
@@ -276,8 +298,139 @@ function paintBanner() {
 const showOffline = () => paintBanner();
 
 function updateCommit() {
-  const has = $("composer").value.trim() || S.draft.audio || S.draft.photo;
+  const text = $("composer").value.trim();
+  const has = !!(text || S.draft.audio || S.draft.photo);
   $("btn-commit").disabled = !has;
+  // With something in the box, Cancel doesn't throw it away — it
+  // puts it down. Say so. Clear is the actual bin.
+  $("btn-cancel").textContent = has ? "Later" : "Cancel";
+  $("btn-clear").hidden = !has;
+  paintOpener(text, has);
+}
+
+/* A parked draft shows as a red dot on the + — a reminder, not a nag. */
+function paintOpener(text, has) {
+  $("btn-compose").classList.toggle("has-draft", has);
+  $("btn-compose").setAttribute("aria-label", has ? "New idea (draft waiting)" : "New idea");
+}
+
+function initial() {
+  const n = (S.profileName || S.user?.email || "").trim();
+  return n ? n[0].toUpperCase() : "·";
+}
+
+/* ---- composer: modal on desktop, sheet on a phone ------------- */
+const isPhone = () => matchMedia("(max-width: 599px)").matches;
+let closing = null;
+
+function openComposer({ focus = true } = {}) {
+  const d = $("compose");
+  if (d.open && d.dataset.state === "open") { if (focus) $("composer").focus(); return; }
+  clearTimeout(closing);
+  $("compose-avatar").textContent = initial();
+  $("compose-name").textContent = S.profileName || "you";
+  trackViewport(true);
+  d.style.removeProperty("--drag");
+  if (!d.open) d.showModal();
+  // Focus inside the tap, or iOS won't raise the keyboard.
+  if (focus) $("composer").focus({ preventScroll: true });
+  requestAnimationFrame(() => requestAnimationFrame(() => { d.dataset.state = "open"; }));
+  growComposer();
+}
+
+function closeComposer() {
+  const d = $("compose");
+  if (!d.open) return;
+  stopRec();
+  d.dataset.state = "closing";
+  d.style.removeProperty("--drag");
+  const done = () => {
+    clearTimeout(closing);
+    d.removeEventListener("transitionend", onEnd);
+    if (d.dataset.state === "closing") { d.close(); delete d.dataset.state; trackViewport(false); }
+  };
+  const onEnd = (e) => { if (e.target === d && e.propertyName === "transform") done(); };
+  d.addEventListener("transitionend", onEnd);
+  closing = setTimeout(done, 380);           // reduced motion, or no transition fired
+}
+
+function growComposer() {
+  if (isPhone()) return;                      // on a phone it just fills the sheet
+  const c = $("composer");
+  c.style.height = "auto";
+  c.style.height = c.scrollHeight + "px";
+}
+
+/* iOS lays the keyboard over the page instead of resizing it, so a
+   bottom-anchored sheet would hide its own buttons. Pin the sheet to
+   the visual viewport instead. */
+function trackViewport(on) {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const set = () => {
+    document.documentElement.style.setProperty("--vv-top", vv.offsetTop + "px");
+    document.documentElement.style.setProperty("--vv-h", vv.height + "px");
+  };
+  if (on) { set(); vv.addEventListener("resize", set); vv.addEventListener("scroll", set); trackViewport.set = set; }
+  else if (trackViewport.set) {
+    vv.removeEventListener("resize", trackViewport.set);
+    vv.removeEventListener("scroll", trackViewport.set);
+  }
+}
+
+function clearDraft() {
+  $("composer").value = "";
+  S.draft = { typeId: null, audio: null, audioMs: 0, photo: null };
+  renderAttached(); renderTypebar(); updateCommit(); growComposer();
+  $("composer").focus();
+}
+
+function wireComposer() {
+  const d = $("compose");
+  $("btn-cancel").onclick = closeComposer;
+  $("btn-clear").onclick = clearDraft;
+
+  // Escape: animate out rather than vanish
+  d.addEventListener("cancel", (e) => { e.preventDefault(); closeComposer(); });
+
+  // A click on the backdrop lands on the dialog itself, outside its box.
+  d.addEventListener("click", (e) => {
+    if (e.target !== d) return;
+    const r = d.getBoundingClientRect();
+    const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    if (!inside) closeComposer();
+  });
+
+  // Chips and the attachment row shouldn't take focus from the text,
+  // or the keyboard drops and the sheet jumps under your thumb.
+  for (const id of ["typebar", "attached", "btn-photo"]) {
+    $(id).addEventListener("pointerdown", (e) => e.preventDefault());
+  }
+
+  // Pull the sheet down by its handle to put it away.
+  const grab = $("compose-grab");
+  let y0 = null, t0 = 0, dy = 0;
+  grab.addEventListener("pointerdown", (e) => {
+    if (!isPhone()) return;
+    y0 = e.clientY; t0 = performance.now(); dy = 0;
+    grab.setPointerCapture(e.pointerId);
+    d.classList.add("is-dragging");
+  });
+  grab.addEventListener("pointermove", (e) => {
+    if (y0 === null) return;
+    dy = Math.max(0, e.clientY - y0);
+    d.style.setProperty("--drag", dy + "px");
+  });
+  const end = () => {
+    if (y0 === null) return;
+    const v = dy / Math.max(1, performance.now() - t0);   // px per ms
+    y0 = null;
+    d.classList.remove("is-dragging");
+    if (dy > 120 || v > 0.6) closeComposer();
+    else d.style.removeProperty("--drag");
+  };
+  grab.addEventListener("pointerup", end);
+  grab.addEventListener("pointercancel", end);
 }
 
 /* ---- recording ---------------------------------------------- */
@@ -304,9 +457,9 @@ async function startRec() {
         S.draft.audio = blob;
         S.draft.audioMs = Date.now() - recStart;
         renderAttached();
-        updateCommit();
       }
       mediaRec = null;
+      updateCommit();
     };
     mediaRec.start();
     recStart = Date.now();
@@ -325,6 +478,7 @@ function stopRec() {
   clearInterval(recTimer);
   $("rectimer").textContent = "";
   $("btn-rec").dataset.recording = "false";
+
   try { mediaRec.stop(); } catch { mediaRec = null; }
 }
 
@@ -365,12 +519,12 @@ async function commit() {
   S.pending.unshift(item);
 
   $("composer").value = "";
-  $("composer").style.height = "auto";
   S.draft = { typeId: S.draft.typeId, audio: null, audioMs: 0, photo: null };
   renderAttached();
   updateCommit();
   render();
-  $("composer").focus();
+  closeComposer();
+  $("posts-panel").scrollTo({ top: 0, behavior: "smooth" });
 
   syncQueue();
   askForSync();
@@ -460,13 +614,6 @@ async function syncQueue() {
 /* ============================================================
    RENDER
    ============================================================ */
-function setLens(l) {
-  S.lens = l;
-  $("lens-all").setAttribute("aria-pressed", String(l === "all"));
-  $("lens-type").setAttribute("aria-pressed", String(l === "type"));
-  render();
-}
-
 function renderTypebar() {
   const bar = $("typebar");
   bar.innerHTML = "";
@@ -476,6 +623,7 @@ function renderTypebar() {
     c.onclick = () => {
       S.draft.typeId = S.draft.typeId === t.id ? null : t.id;
       renderTypebar();
+      updateCommit();
       $("composer").focus();
     };
     bar.appendChild(c);
@@ -502,97 +650,227 @@ function allItems() {
   return [...pend, ...S.entries].sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
+/* ---- the home list: categories with counts -------------------- */
+function catsWithCounts(items) {
+  const count = new Map();
+  for (const i of items) {
+    const k = i.type_id || "none";
+    count.set(k, (count.get(k) || 0) + 1);
+  }
+  const rows = S.types.map((t) => ({ id: t.id, label: t.label, n: count.get(t.id) || 0 }));
+  if (count.get("none")) rows.push({ id: "none", label: "Untyped", n: count.get("none") });
+  return rows;
+}
+
+const CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg>';
+
+function catRow(label, n, id) {
+  const b = el("button", "cat" + (id === null ? " cat--all" : ""));
+  b.type = "button";
+  b.dataset.cat = id ?? "";
+  if (S.cat === id) b.setAttribute("aria-current", "true");
+  b.appendChild(el("span", "cat__name", label));
+  b.appendChild(el("span", "cat__n", String(n)));
+  const c = el("span", "cat__chev"); c.innerHTML = CHEVRON;
+  b.appendChild(c);
+  b.onclick = () => { setCat(id); openSheet(); };
+  return b;
+}
+
 function render() {
-  readTilt();
+  const all = allItems();
+
+  const cats = $("cats");
+  cats.innerHTML = "";
+  // "All posts" lives in the peek bar on a phone; on a wide screen
+  // there's no peek bar, so it becomes the first row (CSS decides).
+  cats.appendChild(catRow("All posts", all.length, null));
+  for (const c of catsWithCounts(all)) cats.appendChild(catRow(c.label, c.n, c.id));
+  $("empty").hidden = all.length > 0;
+
+  // the sheet's title only appears when it's narrowed to one category
+  const t = S.cat === null ? null
+    : S.cat === "none" ? "Untyped"
+    : S.types.find((x) => x.id === S.cat)?.label || "";
+  $("posts-title").hidden = t === null;
+  $("posts-title-text").textContent = t || "";
+
+  for (const m of ["all", "photo", "audio"]) {
+    $("m-" + m).setAttribute("aria-pressed", String(S.media === m));
+  }
+  $("sort-label").textContent =
+    S.sort === "new" ? "Sort by" : S.sort === "old" ? "Oldest" : "Shuffled";
+
+  let items = all;
+  if (S.cat !== null) items = items.filter((i) => (i.type_id || "none") === S.cat);
+  if (S.media === "photo") items = items.filter((i) => i.photo_path || i._localPhoto);
+  if (S.media === "audio") items = items.filter((i) => i.audio_path || i._localAudio);
+  if (S.sort === "old") items = [...items].reverse();
+  if (S.sort === "shuffle") {
+    const r = seeded(String(S.shuffleSeed));
+    items = items.map((i) => [r(), i]).sort((x, y) => x[0] - y[0]).map((x) => x[1]);
+  }
+
   const feed = $("feed");
   feed.innerHTML = "";
-  const items = allItems();
-
-  $("empty").hidden = items.length > 0;
-
-  // one year ago today — silent when there's no hit. Nothing
-  // worse than an app announcing its own emptiness.
-  const now = new Date();
-  const tb = items.find((i) => {
-    const d = new Date(i.created_at);
-    return d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
-        && d.getFullYear() < now.getFullYear();
-  });
-  if (tb) {
-    const box = el("div", "throwback");
-    const yrs = now.getFullYear() - new Date(tb.created_at).getFullYear();
-    box.appendChild(el("div", "throwback__label", `${yrs} year${yrs > 1 ? "s" : ""} ago today`));
-    box.appendChild(el("div", "card__body", tb.body || "(a recording)"));
-    box.onclick = () => openDetail(tb.id);
-    feed.appendChild(box);
-  }
-
-  if (S.lens === "type") {
-    const groups = new Map();
-    for (const i of items) {
-      const k = i.type_label || "Untyped";
-      if (!groups.has(k)) groups.set(k, []);
-      groups.get(k).push(i);
-    }
-    const order = [...S.types.map((t) => t.label), "Untyped"];
-    for (const label of order) {
-      const g = groups.get(label);
-      if (!g?.length) continue;
-      feed.appendChild(el("div", "sectionrule", `${label} · ${g.length}`));
-      for (const i of g) feed.appendChild(card(i));
-    }
-  } else {
-    for (const i of items) feed.appendChild(card(i));
+  for (const i of items) feed.appendChild(card(i));
+  if (!items.length) {
+    feed.appendChild(el("p", "nomatch", all.length ? "Nothing here with that filter." : "Nothing yet."));
   }
 }
 
-/* Read once per render, not once per card — getComputedStyle
-   inside the loop forces a layout flush on every single one. */
-let tiltMax = 0.9;
-function readTilt() {
-  const v = parseFloat(
-    getComputedStyle(document.documentElement).getPropertyValue("--tilt"));
-  if (!Number.isNaN(v)) tiltMax = v;
+function setCat(id) {
+  S.cat = id;
+  render();
+  $("posts-panel").scrollTop = 0;
 }
 
+/* ---- one post ---------------------------------------------------
+   Prototype order: photo full-bleed on top, then who/when in mono,
+   the heading in Neue Montreal, the body in Schoolbook, the type as
+   a black mono tag. */
 function card(i) {
-  const rnd = seeded(i.id);
-  const c = el("article", "card" + (i._pending ? " card--pending" : ""));
-  c.style.setProperty("--card-tilt", `${(rnd() * 2 - 1) * tiltMax}deg`);
+  const c = el("article", "card post" + (i._pending ? " card--pending" : ""));
 
-  const text = i.body || i.transcript;
-  const b = el("p", "card__body" + (i.body ? "" : " card__body--muted"),
-    text || (i.audio_path || i._localAudio ? "[transcribing…]" : ""));
-  c.appendChild(b);
-
-  if (i.audio_path || i._localAudio) c.appendChild(waveform(i));
   if (i.photo_path || i._localPhoto) c.appendChild(photo(i));
 
-  const m = el("div", "card__meta");
-  // Classed individually so the data-meta variants can hide
-  // them selectively without touching this code.
+  const m = el("div", "post__meta");
   m.appendChild(el("span", "who", i.author_name || "—"));
-  m.appendChild(el("span", "when", when(i.created_at)));
-  // redundant when the section rule above already says the type
-  if (i.type_label && S.lens !== "type") m.appendChild(el("span", "type", i.type_label));
-  if (i.reply_count > 0) m.appendChild(el("span", "replies", `${i.reply_count} ${i.reply_count === 1 ? "reply" : "replies"}`));
-  if (i._pending) m.appendChild(el("span", "pendingmark", "not synced"));
+  m.appendChild(el("span", "when", ago(i.created_at)));
   c.appendChild(m);
+
+  const fromVoice = !i.body && i.transcript;
+  const [head, body] = split(i.body || i.transcript);
+  const h = el("h2", "post__head card__body" + (fromVoice ? " card__body--muted" : ""),
+    head || (i.audio_path || i._localAudio ? "Voice note" : ""));
+  c.appendChild(h);
+  if (body) c.appendChild(el("p", "post__body", body));
+
+  if (i.audio_path || i._localAudio) c.appendChild(waveform(i, true));
+
+  const f = el("div", "post__foot");
+  if (i.type_label) f.appendChild(el("span", "tag", i.type_label));
+  if (i.reply_count > 0) f.appendChild(el("span", "post__note", `${i.reply_count} ${i.reply_count === 1 ? "reply" : "replies"}`));
+  if (i._pending) f.appendChild(el("span", "post__note pendingmark", "not synced"));
+  if (f.childNodes.length) c.appendChild(f);
 
   c.onclick = () => openDetail(i.id);
   return c;
 }
 
+/* ---- the posts sheet --------------------------------------------
+   One element, three states: peeking ("All posts"), open, and — on a
+   wide screen — not a sheet at all. */
+const isWide = () => matchMedia("(min-width: 900px)").matches;
+
+function sheetTop() {
+  // the sheet stops just under the masthead, leaving room for the grabber
+  const r = $("top").getBoundingClientRect();
+  document.documentElement.style.setProperty("--sheet-top", Math.round(r.bottom + 22) + "px");
+}
+
+function openSheet() {
+  if (isWide()) return;
+  sheetTop();
+  const p = $("posts");
+  p.style.removeProperty("--drag");
+  p.dataset.state = "open";
+  document.body.classList.add("sheet-open");
+  $("posts-peek").setAttribute("aria-expanded", "true");
+}
+
+function closeSheet() {
+  const p = $("posts");
+  p.style.removeProperty("--drag");
+  p.dataset.state = "closed";
+  document.body.classList.remove("sheet-open");
+  $("posts-peek").setAttribute("aria-expanded", "false");
+}
+
+function wirePosts() {
+  const p = $("posts");
+  closeSheet();
+  sheetTop();
+  addEventListener("resize", () => { sheetTop(); if (isWide()) closeSheet(); });
+
+  $("posts-peek").onclick = () => { setCat(null); openSheet(); };
+  $("scrim").onclick = closeSheet;
+  $("posts-clear").onclick = () => setCat(null);
+
+  for (const m of ["all", "photo", "audio"]) {
+    $("m-" + m).onclick = () => { S.media = m; render(); $("posts-panel").scrollTop = 0; };
+  }
+  $("sort").onchange = (e) => {
+    S.sort = e.target.value;
+    if (S.sort === "shuffle") S.shuffleSeed = Date.now();
+    render();
+    $("posts-panel").scrollTop = 0;
+  };
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && p.dataset.state === "open" && $("detail").hidden && !$("compose").open) closeSheet();
+  });
+
+  // Drag by the grabber or the filter bar; or pull the list down
+  // when it's already at the top. Past a third of the way, or a
+  // decent flick, and it goes.
+  const panel = $("posts-panel");
+  panel.addEventListener("scroll", () => {
+    panel.classList.toggle("is-scrolled", panel.scrollTop > 2);
+  }, { passive: true });
+  let y0 = null, t0 = 0, dy = 0, fromList = false;
+  const start = (e, list) => {
+    if (isWide() || p.dataset.state !== "open") return;
+    if (list && panel.scrollTop > 0) return;
+    y0 = e.clientY; t0 = performance.now(); dy = 0; fromList = list;
+  };
+  const move = (e) => {
+    if (y0 === null) return;
+    dy = Math.max(0, e.clientY - y0);
+    if (fromList && dy < 8) return;          // let small moves be taps/scrolls
+    if (fromList && panel.scrollTop > 0) { y0 = null; return; }
+    p.classList.add("is-dragging");
+    p.style.setProperty("--drag", dy + "px");
+  };
+  const end = () => {
+    if (y0 === null) return;
+    const v = dy / Math.max(1, performance.now() - t0);
+    y0 = null;
+    p.classList.remove("is-dragging");
+    if (dy > window.innerHeight / 3 || (dy > 40 && v > 0.6)) closeSheet();
+    else p.style.removeProperty("--drag");
+  };
+  for (const h of [$("posts-grab"), $("posts-head")]) {
+    h.addEventListener("pointerdown", (e) => {
+      if (e.target.closest("button, select, label")) return;
+      start(e, false);
+      h.setPointerCapture(e.pointerId);
+    });
+    h.addEventListener("pointermove", move);
+    h.addEventListener("pointerup", end);
+    h.addEventListener("pointercancel", end);
+  }
+  panel.addEventListener("touchstart", (e) => start(e.touches[0], true), { passive: true });
+  panel.addEventListener("touchmove", (e) => {
+    move(e.touches[0]);
+    if (y0 !== null && dy >= 8 && e.cancelable) e.preventDefault();
+  }, { passive: false });
+  panel.addEventListener("touchend", end);
+  panel.addEventListener("touchcancel", end);
+}
+
 /* A row of solid blocks, not a smooth waveform. A waveform is a
    data visualisation; this is a printed object. Heights are
    seeded off the id so they're stable. */
-function waveform(i) {
-  const w = el("div", "wave");
+function waveform(i, small = false) {
+  const w = el("div", "wave" + (small ? " wave--small" : ""));
   const rnd = seeded(i.id + "w");
-  const n = 44;
+  const n = small ? 28 : 44;
   for (let k = 0; k < n; k++) {
     const bar = el("i");
-    bar.style.height = `${6 + Math.round(rnd() * 20)}px`;
+    bar.style.height = small
+      ? `${4 + Math.round(rnd() * 10)}px`
+      : `${6 + Math.round(rnd() * 20)}px`;
     w.appendChild(bar);
   }
   w.appendChild(el("span", "wave__time", i.audio_ms ? fmtTime(i.audio_ms) : ""));
@@ -628,30 +906,30 @@ async function openDetail(id, isShuffle = false) {
   if (!i) return;
   S.openId = id;
 
-  $("detail-label").textContent = isShuffle
-    ? "From the pile"
-    : `${i.author_name || "—"} · ${when(i.created_at)}${i.type_label ? " · " + i.type_label : ""}`;
+  $("detail-label").textContent = isShuffle ? "From the pile" : "";
   $("detail-again").hidden = !isShuffle;
+  $("detail").classList.toggle("is-shuffle", isShuffle);
   $("detail-delete").hidden = i._pending;
 
   const body = $("detail-body");
   body.innerHTML = "";
-  const inner = el("div");
-  inner.appendChild(el("div", null, i.body || i.transcript || "(a recording)"));
+  const inner = el("div", "post post--full");
 
-  // Shuffle strips the header down to "from the pile", so put the
-  // attribution back underneath — a found object still wants a date on it.
-  if (isShuffle) {
-    const m = el("div", "card__meta");
-    m.style.justifyContent = "center";
-    m.style.marginTop = "var(--space-4)";
-    m.appendChild(el("span", "who", i.author_name || "—"));
-    m.appendChild(el("span", "when", when(i.created_at)));
-    if (i.type_label) m.appendChild(el("span", "type", i.type_label));
-    inner.appendChild(m);
-  }
-  if (i.audio_path || i._localAudio) inner.appendChild(waveform(i));
+  // same anatomy as the row, just given room
   if (i.photo_path || i._localPhoto) inner.appendChild(photo(i));
+  const m = el("div", "post__meta");
+  m.appendChild(el("span", "who", i.author_name || "—"));
+  m.appendChild(el("span", "when", ago(i.created_at)));
+  inner.appendChild(m);
+  const [head, rest] = split(i.body || i.transcript);
+  inner.appendChild(el("h2", "post__head", head || "Voice note"));
+  if (rest) inner.appendChild(el("p", "post__body", rest));
+  if (i.audio_path || i._localAudio) inner.appendChild(waveform(i));
+  if (i.type_label) {
+    const f = el("div", "post__foot");
+    f.appendChild(el("span", "tag", i.type_label));
+    inner.appendChild(f);
+  }
   body.appendChild(inner);
 
   $("detail").hidden = false;

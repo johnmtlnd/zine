@@ -1,0 +1,138 @@
+/* ============================================================
+   THEME — CUTS
+   From John's Figma prototype (Nov 2026).
+
+   Three faces, three jobs:
+     Century Schoolbook  — the archive's voice: categories, body text
+                           (shipped as TeX Gyre Schola, a free clone)
+     PP Neue Montreal    — headings and controls
+     PP Neue Montreal Mono — the small print: who, when, what kind
+   Nikkei Maru Heavy stays for the masthead only.
+
+   The @font-face rules are at the top of cuts.css.
+   ============================================================ */
+
+:root {
+
+  /* ---- palette, straight from the login ---- */
+  --bg:      #EEEEEE;          /* the prototype's grey */
+  --field-1: #EEEEEE;
+  --field-2: #EEEEEE;
+  --ink:     #1A1A18;
+  --ink-soft:  color-mix(in srgb, var(--ink) 62%, transparent);
+  --ink-faint: color-mix(in srgb, var(--ink) 42%, transparent);
+  --accent:  #FB0D00;          /* the masthead red */
+
+  /* ---- surfaces ----
+     --surface is the sheet: plain white on the grey. */
+  --surface:        #FFFFFF;
+  --surface-strong: #1A1A18;                     /* the black header */
+  --header:         #1A1A18;
+  --header-ink:     #FFFFFF;
+  --surface-sunk:   rgba(26, 26, 24, 0.07);      /* the quiet buttons */
+  --blur:           18px;
+  --saturate:       160%;
+  --specular:       0 0 #0000;
+
+  --hairline:        rgba(26, 26, 24, 0.10);
+  --hairline-strong: rgba(26, 26, 24, 0.18);
+  --border:      1px;
+  --rule-weight: 1px;
+
+  /* Notes' groups have no shadow — they're flat panels. */
+  --shadow-card: 0 0 #0000;
+  --shadow-lift: 0 1px 2px rgba(26, 26, 24, 0.06), 0 10px 30px rgba(26, 26, 24, 0.10);
+
+  --masthead-fill: transparent;
+  --masthead-ink:  var(--ink);
+
+  /* ---- type ----
+     Display is Nikkei Maru (Heavy at 900, per your spec at 0%
+     tracking). Body is the system face, for chrome. The ideas
+     themselves are set in Nikkei Maru Regular — see --font-idea. */
+  --font-display: "Nikkei Maru", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-serif:   "Schoolbook", "Century Schoolbook", "New Century Schoolbook", Georgia, serif;
+  --font-sans:    "Neue Montreal", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono:    "Neue Montreal Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-body:    var(--font-sans);
+  --font-idea:    var(--font-sans);
+
+  --display-weight:    900;
+  --display-track:     0;
+  --display-transform: none;
+  --track-wide:        0.21em;  /* the login's spaced-out caps */
+
+  --text-base: 1rem;
+  --ratio:     1.25;
+  --text-xs:  calc(var(--text-base) / var(--ratio) / var(--ratio));
+  --text-sm:  calc(var(--text-base) / var(--ratio));
+  --text-md:  var(--text-base);
+  --text-lg:  calc(var(--text-base) * var(--ratio));
+  --text-xl:  calc(var(--text-base) * var(--ratio) * var(--ratio));
+  --text-2xl: calc(var(--text-base) * var(--ratio) * var(--ratio) * var(--ratio));
+
+  --label-size:   0.8125rem;
+  --body-size:    var(--text-md);
+  --body-leading: 1.45;
+
+  --title-size:    1.1875rem;   /* an idea in the list */
+  --title-weight:  400;         /* Regular — Heavy's 'c' reads as 'o' this small */
+  --title-leading: 1.25;
+
+  --space-unit: 4px;
+  --density:    1;
+  --space-1: calc(var(--space-unit) * 1  * var(--density));
+  --space-2: calc(var(--space-unit) * 2  * var(--density));
+  --space-3: calc(var(--space-unit) * 3  * var(--density));
+  --space-4: calc(var(--space-unit) * 4  * var(--density));
+  --space-5: calc(var(--space-unit) * 6  * var(--density));
+  --space-6: calc(var(--space-unit) * 8  * var(--density));
+  --space-7: calc(var(--space-unit) * 12 * var(--density));
+
+  /* ---- shape ---- */
+  --radius-card:  14px;
+  --radius-sheet: 18px;
+  --radius-chip:  999px;
+  --radius-btn:   0.8rem;   /* the login's button corner */
+  --radius-field: 11px;
+
+  --pad:      16px;
+  --card-pad: 12px;
+  --gap:      0px;
+  --measure:  40rem;
+
+  /* ---- the torn edge on the toolbar ---- */
+  --tooth: 9px;
+
+  --tilt: 0deg;
+  --grain: 0;
+  --halftone: 0;
+  --dot-size: 3px;
+
+  --photo-filter: none;
+  --wave-radius:  2px;
+  --wave-width:   2px;
+
+  --dur:  160ms;
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* ---- dark ----
+   The header is already black; the rest follows it down. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:      #121211;
+    --field-1: #121211;
+    --field-2: #121211;
+    --ink:     #F2F0EC;
+    --accent:  #FF2A1A;
+
+    --surface:        #1C1C1A;
+    --surface-sunk:   rgba(242, 240, 236, 0.08);
+    --header:         #0A0A09;
+
+    --hairline:        rgba(242, 240, 236, 0.10);
+    --hairline-strong: rgba(242, 240, 236, 0.20);
+    --shadow-lift: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.45);
+  }
+}

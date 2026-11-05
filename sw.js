@@ -9,7 +9,7 @@
    browsers will happily serve the old one forever.
    ============================================================ */
 
-const SHELL_V = "shell-v12";
+const SHELL_V = "shell-v15";
 const SHELL = [
   "./",
   "./index.html",
@@ -18,6 +18,13 @@ const SHELL = [
   "./fonts/PPNikkeiMaru-Heavy.woff",
   "./fonts/PPNikkeiMaru-Regular.woff",
   "./theme-glass.css",
+  "./theme-cuts.css",
+  "./cuts.css",
+  "./fonts/PPNeueMontreal-Regular.woff2",
+  "./fonts/PPNeueMontreal-Medium.woff2",
+  "./fonts/PPNeueMontrealMono-Regular.woff2",
+  "./fonts/PPNeueMontrealMono-Medium.woff2",
+  "./fonts/Schola-regular.woff",
   "./theme-zine.css",
   "./app.js",
   "./api.js",
